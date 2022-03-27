@@ -1,0 +1,120 @@
+This file contains the reverse engineered documentation of random generator
+#2.
+
+--- The implementation of random generator #2 in Intel 286 assembly:
+
+	mov ah, 0
+	int 1Ah				;Get time-random seed in CX:DX
+	push bx
+	xor bp, bp
+	mov ax, cs
+	add ax, dx			;Modify seed
+	mov bx, ax
+	mov dx, 8405h
+	mul dx
+	shl bx, 3
+	add ch, cl
+	add dx, bx
+	add dx, cx
+	shl cx, 2
+	add dx, cx
+	add dh, bl
+	shl cx, 5
+	add ax, 1			;Modifies CF (inc ax doesn't).
+	adc dx, bp			;BP:AX
+	mov bx, dx
+	mul idxc
+	mov ax, bx
+	mov bx, dx
+	mul idxc
+	add ax, bx
+	adc dx, bp			;DX:=random(nr_of_quotes)
+
+---
+
+(cx:dx) = get_time_based_random_seed()
+bp = 0
+ax = cs
+ax += dx
+bx = ax
+dx = 0x8405
+(dx:ax) = ax * dx
+bx *= 8
+ch += cl
+dx += bx
+dx += cx
+cx *= 4
+dx += cx
+dh += bl
+# cx *= 32  # Unused below.
+(dx:ax) += (bp:1)
+bx = dx
+(dx:ax) = ax * idxc
+ax = bx
+bx = dx
+(dx:ax) = ax * idxc
+(dx:ax) += (bp:bx)
+# Return dx as the random number: 0 <= dx < idxc.
+
+---
+
+(cx:dx) = get_time_based_random_seed()
+bx = cs + dx
+(dx:ax) = bx * 0x8405
+bx *= 8
+ch += cl
+dx += bx + cx * 5
+dh += bl
+(dx:ax) += (0:1)
+bx = dx
+dx = (ax * idxc) >> 16
+dx = ((bx * idxc) + dx) >> 16
+# Return dx as the random number: 0 <= dx < idxc.
+
+---
+
+(cx:dx) = get_time_based_random_seed()
+bx = cs + dx
+(dx:ax) = bx * 0x8405
+bx *= 8
+ch += cl
+dx += bx + cx * 5
+dh += bl
+(dx:ax) += (0:1)  # !! Why is this needed?
+#dx = ((dx * idxc) + ((ax * idxc) >> 16)) >> 16
+#dx = ((((dx * idxc) << 16) + ax * idxc) >> 16) >> 16
+dx = ((dx:ax) * idxc) >> 32
+# Return dx as the random number: 0 <= dx < idxc.
+
+# ---
+
+# If 0 <= n < n_limit, n is uniformly random, and r_limit >= 1, and r_limit
+# is much smaller than n_limit, then
+# r := floor(n * r_limit / n_limit), and
+# 0 <= r < r_limit, and r is approximately uniformly random. (If n_limit is
+# a multiple of r_limit, then r is uniformly random.)
+#
+# If n_limit == (1 << 32) and n is a random 32-bit integer, then r = (n *
+# r_limit) >> 32. 
+
+# Create a random 32-bit integer in (dx:ax).
+# The details don't make much sense.
+  (cx:dx) = get_time_based_random_seed()
+  bx = cs + dx
+  (dx:ax) = bx * 0x8405
+  dx += bh * 0x800 + bl * 0x108 + ch * 0x500 + cl * 0x505
+  (dx:ax) += (0:1)  # !! Why is this needed?
+# Create a random number in dx for which 0 <= dx < idxc.
+  dx = ((dx:ax) * idxc) >> 32
+# Return dx as the random number: 0 <= dx < idxc.
+
+# ---
+
+# Create a random 32-bit integer in (dx:ax).
+# The details don't make much sense.
+  (cx:dx) = get_time_based_random_seed()
+  bx = cs + dx
+  (dx:ax) = bh * 0x8840500 + bl * 0x1088405 + ch * 0x5000000 + cl * 0x5050000 + 1
+# Create a random number in dx for which 0 <= dx < idxc.
+  dx = ((dx:ax) * idxc) >> 32
+# Return dx as the random number: 0 <= dx < idxc.
