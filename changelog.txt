@@ -1,0 +1,82 @@
+-*- coding: utf-8 -*-
+
+History of the quote database (QUOTE.TXT):
+
+* 2.41 QUOTE.TXT expanded. It's now 1400K long. (Way below the upper limit.)
+* 2.43 Added quotes from Taylor.
+
+History of old releases (now lost):
+
+* 0.0  J.C.R.'s VRQ program (I decided to write a same but better program. )
+* 0.1  MOTTO.*
+* 1.0  Indexer routine
+* 1.1  Plus Random Displayer (displays characters)
+* 1.2  Line Displayer
+* 1.25 Is able to align lines
+* 1.3  Plus Header & Footer lines
+* 1.4  Support of ANSI.SYS (if detected), bright quotes
+* 2.00 Command line handling & documentation & RH
+* 2.10 Optimized & reduced code (the core routines are rewritten in assembly)
+* 2.20 Compressed Indextable.
+* 2.30 16K preread cache for fast indexing; QUOTE.TXT can be up to 24000 lines.
+* 2.31 Annoying bugs fixed.
+* 2.32 Code has been optimized. (4500 bytes)
+
+History of code written in 1996 and updated in 2022:
+
+* 2.33 Rest of code rewritten in Turbo Pascal 7.0 internal assembly.
+       Random number generation is very slow. May contain a bug.
+       quote3.pas is Turbo Pascal 7.0 source code with just inline assembly.
+       quote3.exe.orig is 2848 bytes.
+* 2.34 From 2.33 with random number generator replaced with a faster one.
+       Released on 2022-03-27.
+       quote34.pas is Turbo Pascal 7.0 source code with just inline assembly.
+       quote34.exe.orig is 2848 bytes.
+* 2.40 Turbo Pascal 7.0 inline assembly ported to A86 3.22 assembly.
+       Source code and .exe program binary have been lost.
+* 2.41 Turbo Pascal 7.0 inline assembly ported to NASM 0.98.39 assembly
+       on 2022-03-27. Random number generation is very slow.
+       quote4.nasm is NASM 0.98.39 source code.
+       quote4n.com.orig and quote4.com.orig are 1220 bytes, built on 2022-03-27.
+* 2.42 From 2.41 random number generator replaced with a faster one.
+       Released on 2022-03-27.
+       quote42.nasm is NASM 0.98.39 source code.
+       quote42n.com.orig is 1226 bytes, built on 2022-03-27.
+* 2.50 ANSI.SYS is no longer needed for color display.
+       Released in PotterSoftware Entry Pack. Random number generation is
+       very slow.
+       quote5.8 is A86 3.22 source code reverse engineered from quote5.com.orig.
+       quote5.com.orig is 1192 bytes.
+* 2.51 .com program is even smaller.
+       Source code and .com program binary of 984 bytes have been lost.
+* 2.52 From 2.50 random number generator replaced with a faster one.
+       Released on 2022-03-27.
+       quote52.8 is A86 3.22 source code, most of it reverse engineered.
+       quote52.com.orig is 1208 bytes.
+* 2.60 QUOTE.IDX index file format redesigned, file is much smaller:
+       just 8% of before, just 0.976% of QUOTE.TXT.
+       Source code and .com program binary have been lost.
+* 2.61 Fully working, smaller.
+       Source code and .com program binary of 784 bytes have been lost.
+* 2.62 Even smaller. Parameter- and full error handling included. Bugs fixed.
+       Random number generator is fast.
+       Released on 1996-09-22.
+       quote.8 is A86 3.22 .. 4.05 source code.
+       quote.nasm is NASM 0.98.39 source code.
+       quote.com.orig is 794 bytes.
+* 2.63 quotex.nasm is under development since 2022-03-18.
+       TODO: 8086 support
+       TODO: better random seed algorithm
+       TODO: report error if empty or more than 65535 quotes
+       TODO: report error (or make it work) if no trailing CRLF+CRLF
+       TODO: Linux i386 version with ANSI codes for linux and xterm terminals
+       TODO: more strict with leading -- and -&
+       TODO: autodetect if the index file needs to be regenerated
+       TODO: add validator for quote.txt
+* 2.70 A DOS device driver (loadable from CONFIG.SYS) variant of 2.62,
+       written on 1997-03-22. It contains a text font, and sets up a splash
+       screen for booting.
+       Not released to the general public, backed up.
+       Source file is fquote.8, binary is fquote.bin.
+
+__END__
