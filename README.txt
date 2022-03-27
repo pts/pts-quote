@@ -53,4 +53,7 @@ About the index file quote.idx:
   Versions 2.30 .. 2.5? use a verbose format, versions since 2.60 use a
   compact format. Delete quote.idx between using different versions.
 
+pts-quote is free software released under the GNU GPL v2 license. There is
+NO WARRANTY. Use at your own risk.
+
 __END__
