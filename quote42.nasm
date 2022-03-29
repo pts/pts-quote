@@ -208,7 +208,7 @@ mov [qqq_han], ax
 ; blockread(f, buf, $FFFF, qqq_a);
 mov ah, 0x3f
 mov bx, [qqq_han]
-mov cx, 0xffff
+mov cx, 0xffff  ; !! Lower this to proect stack etc. against buffer overflow.
 mov dx, buf
 int 0x21
 mov [qqq_a], ax

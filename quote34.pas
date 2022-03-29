@@ -296,7 +296,7 @@ lls:    { XReset(IDXFN); }
 	mov cx, $FFFF
         mov dx, offset buf
         int 21h
-	mov qqq.a, ax
+	mov qqq.a, ax  { Save number of (compressed) bytes read to qqq.a. }
 	{ close(f); }
 	mov ah, 3Eh
 	mov bx, qqq.han
@@ -333,7 +333,7 @@ llc:    cmp qqq.xch, 'C'
 	mov qqq.han, ax
 	{ Now qqq.a-1 is the number of quotes in txtfn, provided that txtfn ends with CRLF + CRLF. }
 	xor ax, ax
-	mov word ptr qqq.l, ax  { L kezd┼æoffszet kisz├ímol├ísa }
+	mov word ptr qqq.l, ax  { L kezdőoffszet kiszámolása }
 	mov word ptr qqq.l+2, ax
 	mov si, qqq.a
 	test si, si

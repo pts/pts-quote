@@ -14,6 +14,7 @@
 ; !! TODO: report error if empty or more than 65535 quotes
 ; !! TODO: report error (or make it work) if no trailing CRLF+CRLF
 ; !! TODO: Linux i386 version with ANSI codes for linux and xterm terminals
+; !! TODO: better handle quotes longer than 4096 bytes
 ;
 
 ;I read from QUOTE.TXT, and I read/write/keep QUOTE.IDX in the current dir.
