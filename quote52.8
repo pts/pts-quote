@@ -37,6 +37,8 @@ jmp_near macro
 qqq_a= [018h]w
 qqq_w= [01Ch]w
 offset_qqq_l= 01Eh
+offset_buf= 068h
+offset_var_s= offset_buf
 
 _code:
 _start:
@@ -107,7 +109,7 @@ mov [028h],ax  ; @  A32800
 mov word qqq_a,01h  ; @  C70618000100
 lx_1ad:
 call lx_466  ; @  E8B602
-mov si,064h  ; @  BE6400
+mov si,offset_buf-4  ; @  BE6400
 add si,[01Ah]  ; @  03361A00
 cmp word [si],0A0Dh  ; @  813C0D0A
 jnz lx_1f3  ; @  7536
@@ -146,7 +148,7 @@ dec cx  ; @  49
 mov si,0406Fh  ; @  BE6F40
 mov ax,ds  ; @  8CD8
 mov es,ax  ; @  8EC0
-mov di,068h  ; @  BF6800
+mov di,offset_buf  ; @  BF6800
 xor dx,dx  ; @  33D2
 lx_229:
 lodsw  ; @  AD
@@ -160,7 +162,7 @@ stosw  ; @  AB
 lx_238:
 loop lx_229  ; @  E2EF
 mov qqq_a,di  ; @  893E1800
-sub word qqq_a, 068h  ; db 083h, 02eh, 018h, 0, 068h  ; sub word [018h], byte +068h  ; @  832E180068
+sub word qqq_a, offset_buf  ; db 083h, 02eh, 018h, 0, 068h  ; sub word [018h], byte +068h  ; @  832E180068
 mov ah,03Ch  ; @  B43C
 mov cx,00h  ; @  B90000
 mov dx,idxfn_data  ; @  BA0C00
@@ -175,7 +177,7 @@ lx_259:
 mov ah,040h  ; @  B440
 mov bx,[02Eh]  ; @  8B1E2E00
 mov cx,qqq_a  ; @  8B0E1800
-mov dx,068h  ; @  BA6800
+mov dx,offset_buf  ; @  BA6800
 int 021h  ; @  CD21
 mov ah,03Eh  ; @  B43E
 mov bx,[02Eh]  ; @  8B1E2E00
@@ -192,7 +194,7 @@ lx_283:
 mov ah,03Fh  ; @  B43F
 mov bx,[02Eh]  ; @  8B1E2E00
 mov cx,0FFFFh  ; @  B9FFFF
-mov dx,068h  ; @  BA6800
+mov dx,offset_buf  ; @  BA6800
 int 021h  ; @  CD21
 mov qqq_a,ax  ; @  A31800
 mov ah,03Eh  ; @  B43E
@@ -200,7 +202,7 @@ mov bx,[02Eh]  ; @  8B1E2E00
 int 021h  ; @  CD21
 mov cx,qqq_a  ; @  8B0E1800
 mov dx,01h  ; @  BA0100
-mov si,068h  ; @  BE6800
+mov si,offset_var_s  ; @  BE6800
 mov di,0406Fh  ; @  BF6F40
 mov ax,ds  ; @  8CD8
 mov es,ax  ; @  8EC0
@@ -298,7 +300,7 @@ int 021h  ; @  CD21
 mov ah,03Fh  ; @  B43F
 mov bx,[02Eh]  ; @  8B1E2E00
 mov cx,0FFh  ; @  B9FF00
-mov dx,069h  ; @  BA6900
+mov dx,offset_var_s+1  ; @  BA6900
 int 021h  ; @  CD21
 mov qqq_w,ax  ; @  A31C00
 cmp ax,00h  ; @  3D0000
@@ -306,7 +308,7 @@ jnz lx_363  ; @  7503
 jmp_near lx_448  ; @  E9E500
 lx_363:
 mov bx,00h  ; @  BB0000
-mov si,069h  ; @  BE6900
+mov si,offset_var_s+1  ; @  BE6900
 lx_369:
 or bh,bh  ; @  0AFF
 jnz lx_375  ; @  7508
@@ -317,13 +319,13 @@ jmp short lx_369  ; @  EBF4
 lx_375:
 jmp_near lx_462  ; @  E9EA00
 lx_378:
-mov [068h],bl  ; @  881E6800
+mov [offset_var_s],bl  ; @  881E6800
 inc bx  ; @  43
 inc bx  ; @  43
 add [offset_qqq_l],bx  ; @  011E1E00
 adc word [offset_qqq_l+2], 0  ; db 083h, 016h, offset_qqq_l+2, 0, 0 ; adc word [offset_qqq_l+2],byte +00h  ; @  8316200000
 mov cx,ds  ; @  8CD9
-mov si,068h  ; @  BE6800
+mov si,offset_var_s  ; @  BE6800
 mov qqq_w,si  ; @  89361C00
 lodsb  ; @  AC
 cmp al,00h  ; @  3C00
@@ -428,16 +430,17 @@ int 021h  ; @  CD21
 lx_466:
 cmp word [01Ah],04004h  ; @  813E1A000440
 jnz lx_498  ; @  752A
-xor di, 068h  ; db 083h, 0f7h, 068h  ; xor di,byte +068h  ; @  83F768
+; !! TODO: Use `mov di' instead of `xor di', combine with the `add', fix it everywhere.
+xor di, offset_buf  ; db 083h, 0f7h, 068h  ; xor di,byte +068h  ; @  83F768
 add di,04000h  ; @  81C70040
-mov ax,[068h]  ; @  A16800
+mov ax,[offset_buf]  ; @  A16800
 stosw  ; @  AB
-mov ax,[06Ah]  ; @  A16A00
+mov ax,[offset_buf+2]  ; @  A16A00
 stosw  ; @  AB
 mov ah,03Fh  ; @  B43F
 mov bx,[02Eh]  ; @  8B1E2E00
 mov cx,04000h  ; @  B90040
-mov dx,06Ch  ; @  BA6C00
+mov dx,offset_buf+4  ; @  BA6C00
 int 021h  ; @  CD21
 jnz lx_492  ; @  7505
 mov ax,04CF1h  ; @  B8F14C
@@ -446,7 +449,7 @@ lx_492:
 mov word [01Ah],04h  ; @  C7061A000400
 lx_498:
 mov bx,[01Ah]  ; @  8B1E1A00
-mov al,[bx+068h]  ; @  8A4768
+mov al,[bx+offset_buf]  ; @  8A4768
 inc word [01Ah]  ; @  FF061A00
 add word [offset_qqq_l], 1  ; db 083h, 006h, 01eh, 0, 1 ; add word [offset_qqq_l],byte +01h  ; @  83061E0001
 adc word [offset_qqq_l+2], 0  ; db 083h, 016h, offset_qqq_l+2, 0, 0 ; adc word [offset_qqq_l+2],byte +00h  ; @  8316200000
