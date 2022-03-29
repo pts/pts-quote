@@ -55,6 +55,24 @@
 ; * minimum quote.idx file size: 2 + 1 == 3 bytes
 ; * maximum quote.idx file size: 2 + (55 << 10) == 56322 bytes
 ;
+; Memory layout:
+;
+; * 0...0x80: PSP (Program Segment Prefix), populated by DOS.
+; * 0x80...0x100: String containing command-line arguments, populated by DOS.
+;   It starts with the 8-bit variable named `param'.
+; * 0xf0...0xf2 (2 bytes): Variable named qqqqw. Overlaps command-line arguments.
+; * 0xf2...0xf4 (2 bytes): Variable named qqqqbefore. Overlaps command-line arguments.
+; * 0x100... (at most 3840 bytes): .com file (code and data) loaded by DOS.
+;   Entry point is at the beginning, has label _start for convenience.
+; * 0x1000...0x1800 (2048 bytes): Variable named buffer, file preread buffer.
+; * 0x1800...0x1802 (2 bytes): Variable named idxc, contains total number of quotes.
+; * 0x1802...0xf402 (56320 bytes): Array variable named index, index
+;   entries: each byte contains the total number of quotes whose first byte is in the
+;   corresponding 1024-byte block of quote.txt.
+; * 0xf402...0x10000 (3070 bytes): Stack, it grows from high to low offsets. Before
+;   jumping to 0x100, DOS pushes the exit address 0 within the PSP (containing an
+;   `int 20h' instruction), so that a simple `ret' will exit the program.
+;
 
 ; --- Library for emulating byte-by-byte A86 output.
 ;
