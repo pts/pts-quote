@@ -62,7 +62,6 @@ jnc strict short lx_12b
 mov byte [ttt], '*'  ; This means there's no ANSI.SYS
 lx_12b:
 
-push ds  ; Header ki
 push strict word headermsg
 call func_Header
 
@@ -77,6 +76,9 @@ mov al, ' '
 lx_146:
 and al, 255-32
 mov [qqq_xch], al
+; es will remain this way for the rest of the run.
+push ds
+pop es
 ; XReset(IdxFn);
 mov ax, 0x3d00  ; Open for Read Only, C-Mode
 mov dx, idxfn
@@ -88,7 +90,7 @@ cmp ax, strict word 0x0  ; if (IOResult<>0) or (xch<>#0) then
 jne strict short lx_16d
 cmp byte [qqq_xch], 0x0
 jne strict short lx_16d
-jmp strict near lx_278
+jmp strict near lls
 lx_16d:
 ; XReset(TXTFN);
 mov ax, 0x3d00  ; Open for Read Only, C-Mode
@@ -155,7 +157,7 @@ mov bx, [qqq_han]
 int 0x21
 cmp byte [qqq_xch], 'A'  ; Nem írjuk ki az IT-t, ha az A par. van
 jne strict short lx_222
-jmp strict near lx_2c7
+jmp strict near llc
 lx_222:
 mov cx, [qqq_a]
 dec cx
@@ -198,9 +200,9 @@ mov ah, 0x3e
 mov bx, [qqq_han]
 int 0x21
 ; goto c;
-jmp strict short lx_2c7
-; end else begin
-lx_278:
+jmp strict short llc
+
+lls:  ; end else begin
 ; XReset(IDXFN);
 mov ax, 0x3d00  ; Open for Read Only, C-Mode
 mov dx, idxfn
@@ -242,7 +244,7 @@ lx_2c0:
 inc dx
 loop lx_2af
 mov [qqq_a], dx
-lx_2c7:
+llc:
 cmp byte [qqq_xch], 'C'
 jne strict short lx_2d1
 jmp strict near lx_46d
@@ -402,7 +404,8 @@ mov dx, ttt+17
 int 0x21
 mov byte [qqq_ansich], 0x0
 lx_404:
-push ds  ; Display the string "s" with "before" spaces in front of it
+
+; Display the string "s" with "before" spaces in front of it
 mov si, [qqq_w]
 lodsb
 mov cl, al
@@ -432,7 +435,7 @@ lx_434:
 int 0x29
 loop lx_434
 lx_438:
-pop ds
+
 cmp byte [ttt], '*'  ; Restore original color via ANSI EscSeq if needed
 je strict short lx_447
 mov ah, 0x9
@@ -451,7 +454,6 @@ jmp strict near lx_33a  ; Ha FALSE-t ad vissza, még van köv. sor, Különben l
 lx_454:
 push strict word 0xd9c0  ; '└┘'
 call func_PrintLine
-push ds
 push strict word footermsg
 call func_Header
 mov ah, 0x3e  ; Close(F);
@@ -488,7 +490,7 @@ add word [qqq_l], byte +0x1  ; inc(qqq_l);
 adc word [qqq_l+2], byte +0x0
 ret
 
-; procedure Header(const s: OpenString); assembler;
+; procedure Header(const s: near OpenString); assembler;
 %define Header_arg_s (bp+4)
 func_Header:
 push bp
@@ -512,8 +514,7 @@ int 0x29
 int 0x29
 dec al
 loop lx_6e
-push ds
-lds si, [Header_arg_s]
+mov si, [Header_arg_s]
 lodsb
 mov ah, 0x0
 mov dx, ax
@@ -533,7 +534,6 @@ lx_9b:
 lodsb
 int 0x29
 loop lx_9b
-pop ds
 mov cx, 0x32
 sub cx, bx
 sub cx, dx
@@ -560,7 +560,7 @@ mov ah, 0x9
 int 0x21
 lx_d1:
 leave
-ret 0x4
+ret 2
 
 ; procedure PrintLine(w: word); assembler;
 %define PrintLine_arg_w (bp+4)

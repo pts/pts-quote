@@ -61,8 +61,8 @@ mov ax,0E0Dh  ; @0x0110  B80D0E
 int 010h  ; @0x0113  CD10
 mov al,0Ah  ; @0x0115  B00A
 int 010h  ; @0x0117  CD10
-db 06ah, hmsg_data  ;!! push byte +018h  ; @0x0119  6A18
-call print_header  ; @0x011B  E89003
+db 06ah, headermsg_data  ;!! push byte +018h  ; @0x0119  6A18
+call func_Header  ; @0x011B  E89003
 mov al,[cs:081h]  ; @0x011E  2EA08100
 cmp al,' '  ; @0x0122  3C20
 jnz lx_12a  ; @0x0124  7504
@@ -87,7 +87,7 @@ cmp ax,00h  ; @0x0153  3D0000
 jnz lx_162  ; @0x0156  750A
 cmp byte [02Ch],0Dh  ; @0x0158  803E2C000D
 jnz lx_162  ; @0x015D  7503
-jmp_near lx_273  ; @0x015F  E91101
+jmp_near lls  ; @0x015F  E91101
 lx_162:
 mov ax,03D00h  ; @0x0162  B8003D
 mov dx,txtfn_data  ; @0x0165  BA0000
@@ -149,7 +149,7 @@ mov bx,[02Eh]  ; @0x0208  8B1E2E00
 int 021h  ; @0x020C  CD21
 cmp byte [02Ch],041h  ; @0x020E  803E2C0041
 jnz lx_218  ; @0x0213  7503
-jmp_near lx_2c5  ; @0x0215  E9AD00
+jmp_near llc  ; @0x0215  E9AD00
 lx_218:
 mov cx,qqq_a  ; @0x0218  8B0E1800
 dec cx  ; @0x021C  49
@@ -190,8 +190,9 @@ int 021h  ; @0x0266  CD21
 mov ah,03Eh  ; @0x0268  B43E
 mov bx,[02Eh]  ; @0x026A  8B1E2E00
 int 021h  ; @0x026E  CD21
-jmp_near lx_2c5  ; @0x0270  E95200
-lx_273:
+jmp_near llc  ; @0x0270  E95200
+
+lls:
 mov ax,03D00h  ; @0x0273  B8003D
 mov dx,idxfn_data  ; @0x0276  BA0C00
 int 021h  ; @0x0279  CD21
@@ -209,6 +210,8 @@ mov ah,03Eh  ; @0x0294  B43E
 mov bx,[02Eh]  ; @0x0296  8B1E2E00
 int 021h  ; @0x029A  CD21
 mov cx,qqq_a  ; @0x029C  8B0E1800
+
+; Decompress the index.
 mov dx,01h  ; @0x02A0  BA0100
 mov si,offset_var_s  ; @0x02A3  BE6800
 mov di,0406Fh  ; @0x02A6  BF6F40
@@ -231,7 +234,8 @@ lx_2be:
 inc dx  ; @0x02BE  42
 loop lx_2ad  ; @0x02BF  E2EC
 mov qqq_a,dx  ; @0x02C1  89161800
-lx_2c5:
+
+llc:
 cmp byte [02Ch],043h  ; @0x02C5  803E2C0043
 jnz lx_2cf  ; @0x02CA  7503
 jmp_near lx_462  ; @0x02CC  E99301
@@ -417,8 +421,8 @@ lx_448:
 mov dx,0D9C0h  ; @0x0448  BAC0D9
 call func_PrintLine  ; @0x044B  E8BF00
 push ds  ; @0x044E  1E
-db 06ah, fmsg_data  ;!! push byte +03Bh  ; @0x044F  6A3B
-call print_header  ; @0x0451  E85A00
+db 06ah, footermsg_data  ;!! push byte +03Bh  ; @0x044F  6A3B
+call func_Header  ; @0x0451  E85A00
 mov ah,03Eh  ; @0x0454  B43E
 mov bx,[02Eh]  ; @0x0456  8B1E2E00
 int 021h  ; @0x045A  CD21
@@ -462,7 +466,7 @@ add word [offset_qqq_l], 1  ; db 083h, 006h, 01eh, 0, 1 ; add word [offset_qqq_l
 adc word [offset_qqq_l+2], 0  ; db 083h, 016h, offset_qqq_l+2, 0, 0 ; adc word [offset_qqq_l+2],byte +00h  ; @0x04A8  8316200000
 ret  ; @0x04AD  C3
 
-print_header:
+func_Header:
 push bp  ; @0x04AE  55
 mov bp,sp  ; @0x04AF  89E5
 mov bx,010h  ; @0x04B1  BB1000
@@ -545,11 +549,11 @@ seg_delta= (($-_code) shr 4)+010h
 _data:
 
 ;=======Kezdőértékes adatok
-txtfn:	db 'QUOTE.TXT',0,0,0  ; Extra 0s because of _bss overlap with hmsg.
+txtfn:	db 'QUOTE.TXT',0,0,0  ; Extra 0s because of _bss overlap with headermsg.
 txtfn_data equ txtfn-_data
-idxfn:	db 'QUOTE.IDX',0,0,0  ; Extra 0s because of _bss overlap with hmsg.
+idxfn:	db 'QUOTE.IDX',0,0,0  ; Extra 0s because of _bss overlap with headermsg.
 idxfn_data equ idxfn-_data
-hmsg:	db 34,'PotterSoftware Quote Displayer 2.5'
-hmsg_data equ hmsg-_data
-fmsg:	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
-fmsg_data equ fmsg-_data
+headermsg:	db 34,'PotterSoftware Quote Displayer 2.5'
+headermsg_data equ headermsg-_data
+footermsg:	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
+footermsg_data equ footermsg-_data

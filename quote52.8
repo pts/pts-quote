@@ -46,6 +46,7 @@ _start:
 mov ax,ds  ; @0x100  8CD8
 add ax,seg_delta  ; @  055400
 mov ds,ax  ; @  8ED8
+mov es,ax  ; es will remain this way for the rest of the run.
 mov ax,ss  ; @  8CD0
 add ax,0100h  ; @  050001
 mov ss,ax  ; @  8ED0  ; !! Why modify ss? Do we need extra stack space?
@@ -54,8 +55,8 @@ mov ax,0E0Dh  ; @  B80D0E
 int 010h  ; @  CD10
 mov al,0Ah  ; @  B00A
 int 010h  ; @  CD10
-db 06ah, hmsg_data  ;!! push byte +018h  ; @  6A18
-call print_header  ; @  E89003
+db 06ah, headermsg_data  ;!! push byte +018h  ; @  6A18
+call func_Header  ; @  E89003
 mov al,[cs:081h]  ; @  2EA08100
 cmp al,' '  ; @  3C20
 jnz lx_12a  ; @  7504
@@ -67,8 +68,6 @@ mov byte [02Ch],' '  ; @  C6062C0020
 lx_137:
 and al,0DFh  ; @  24DF
 mov [02Ch],al  ; @  A22C00
-mov ax,ds  ; @  8CD8
-mov es,ax  ; @  8EC0
 ; XReset(IdxFn);
 mov ax,03D00h  ; @  B8003D
 mov dx,idxfn_data  ; @  BA0C00
@@ -80,7 +79,7 @@ cmp ax,00h  ; @  3D0000
 jnz lx_162  ; @  750A
 cmp byte [02Ch],0Dh  ; @  803E2C000D
 jnz lx_162  ; @  7503
-jmp_near lx_273  ; @  E91101
+jmp_near lls  ; @  E91101
 lx_162:
 mov ax,03D00h  ; @  B8003D
 mov dx,txtfn_data  ; @  BA0000
@@ -144,13 +143,13 @@ mov bx,[02Eh]  ; @  8B1E2E00
 int 021h  ; @  CD21
 cmp byte [02Ch],041h  ; @  803E2C0041
 jnz lx_218  ; @  7503
-jmp_near lx_2c5  ; @  E9AD00
-lx_218:
+jmp_near llc  ; @  E9AD00
+
+lx_218:  ; Compress the index from offset_idx+2 to offset_buf.
+; qqq_a is still the number of quotes.
 mov cx,qqq_a  ; @  8B0E1800
 dec cx  ; @  49
 mov si,0406Fh  ; @  BE6F40
-mov ax,ds  ; @  8CD8
-mov es,ax  ; @  8EC0
 mov di,offset_buf  ; @  BF6800
 xor dx,dx  ; @  33D2
 lx_229:
@@ -185,8 +184,9 @@ int 021h  ; @  CD21
 mov ah,03Eh  ; @  B43E
 mov bx,[02Eh]  ; @  8B1E2E00
 int 021h  ; @  CD21
-jmp_near lx_2c5  ; @  E95200
-lx_273:
+jmp_near llc  ; @  E95200
+
+lls:
 mov ax,03D00h  ; @  B8003D
 mov dx,idxfn_data  ; @  BA0C00
 int 021h  ; @  CD21
@@ -205,10 +205,8 @@ mov bx,[02Eh]  ; @  8B1E2E00
 int 021h  ; @  CD21
 mov cx,qqq_a  ; @  8B0E1800
 mov dx,01h  ; @  BA0100
-mov si,offset_var_s  ; @  BE6800
+mov si,offset_buf  ; @  BE6800
 mov di,0406Fh  ; @  BF6F40
-mov ax,ds  ; @  8CD8
-mov es,ax  ; @  8EC0
 lx_2ad:
 lodsb  ; @  AC
 mov ah,00h  ; @  B400
@@ -225,8 +223,9 @@ dec cx  ; @  49
 lx_2be:
 inc dx  ; @  42
 loop lx_2ad  ; @  E2EC
-mov qqq_a,dx  ; @  89161800
-lx_2c5:
+mov qqq_a,dx  ; @  89161800  ; qqq.a := (number of quotes) + 1.
+
+llc:
 cmp byte [02Ch],043h  ; @  803E2C0043
 jnz lx_2cf  ; @  7503
 jmp_near lx_462  ; @  E99301
@@ -373,7 +372,7 @@ int 010h  ; @  CD10
 mov bx,cx  ; @  8BD9
 mov cx,04Eh  ; @  B94E00
 call lx_526  ; @  E82D01
-push ds  ; @  1E
+
 mov si,qqq_w  ; @  8B361C00
 lodsb  ; @  AC
 mov cl,al  ; @  88C1
@@ -407,7 +406,7 @@ lx_433:
 int 010h  ; @  CD10
 loop lx_433  ; @  E2FC
 lx_437:
-pop ds  ; @  1F
+
 mov ax,0EB3h  ; @  B8B30E
 mov bh,00h  ; @  B700
 int 010h  ; @  CD10
@@ -419,9 +418,8 @@ jmp_near lx_339  ; @  E9F1FE
 lx_448:
 mov dx,0D9C0h  ; @  BAC0D9
 call func_PrintLine  ; @  E8BF00
-push ds  ; @  1E
-db 06ah, fmsg_data  ;!! push byte +03Bh  ; @  6A3B
-call print_header  ; @  E85A00
+db 06ah, footermsg_data  ;!! push byte +03Bh  ; @  6A3B
+call func_Header  ; @  E85A00
 mov ah,03Eh  ; @  B43E
 mov bx,[02Eh]  ; @  8B1E2E00
 int 021h  ; @  CD21
@@ -458,7 +456,7 @@ add word [offset_qqq_l], 1  ; db 083h, 006h, 01eh, 0, 1 ; add word [offset_qqq_l
 adc word [offset_qqq_l+2], 0  ; db 083h, 016h, offset_qqq_l+2, 0, 0 ; adc word [offset_qqq_l+2],byte +00h  ; @  8316200000
 ret  ; @  C3
 
-print_header:
+func_Header:
 push bp  ; @  55
 mov bp,sp  ; @  89E5
 mov bx,010h  ; @  BB1000
@@ -541,11 +539,11 @@ seg_delta= (($-_code) shr 4)+010h
 _data:
 
 ;=======Kezdőértékes adatok
-txtfn:	db 'QUOTE.TXT',0,0,0  ; Extra 0s because of _bss overlap with hmsg.
+txtfn:	db 'QUOTE.TXT',0,0,0  ; Extra 0s because of _bss overlap with headermsg.
 txtfn_data equ txtfn-_data
-idxfn:	db 'QUOTE.IDX',0,0,0  ; Extra 0s because of _bss overlap with hmsg.
+idxfn:	db 'QUOTE.IDX',0,0,0  ; Extra 0s because of _bss overlap with headermsg.
 idxfn_data equ idxfn-_data
-hmsg:	db 34,'PotterSoftware Quote Displayer 2.5'
-hmsg_data equ hmsg-_data
-fmsg:	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
-fmsg_data equ fmsg-_data
+headermsg:	db 34,'PotterSoftware Quote Displayer 2.5'
+headermsg_data equ headermsg-_data
+footermsg:	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
+footermsg_data equ footermsg-_data
