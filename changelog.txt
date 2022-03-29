@@ -73,6 +73,7 @@ History of code written in 1996 and updated in 2022:
        TODO: more strict with leading -- and -&
        TODO: autodetect if the index file needs to be regenerated
        TODO: add validator for quote.txt
+       TODO: better handle quotes longer than 4096 bytes
 * 2.70 A DOS device driver (loadable from CONFIG.SYS) variant of 2.62,
        written on 1997-03-22. It contains a text font, and sets up a splash
        screen for booting.
