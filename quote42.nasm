@@ -151,7 +151,8 @@ jne strict short lx_1b5
 cmp [qqq_l+2], dx
 jne strict short lx_1b5
 
-; Close(f);
+; Now qqq.a == (number of quotes) + 1.
+; close(f);
 mov ah, 0x3e
 mov bx, [qqq_han]
 int 0x21
@@ -177,8 +178,7 @@ or ax, 0xf0
 stosw
 lx_242:
 loop lx_233
-mov [qqq_a], di
-sub word [qqq_a], buf
+sub di, buf  ; DI := number of compressed bytes to write.
 
 ; XRewrite(IDXFN);
 mov ah, 0x3c  ; Create file
@@ -189,10 +189,10 @@ jnc strict short lx_25f
 mov ax, 0x4cf0  ; Fatal error
 int 0x21
 lx_25f:
-; blockwrite(f, buf, qqq_a);
+; blockwrite(f, buf, compressed_size);
 mov ah, 0x40
 mov bx, [qqq_han]
-mov cx, [qqq_a]
+mov cx, di
 mov dx, buf
 int 0x21
 ; close(f);
@@ -209,19 +209,18 @@ mov dx, idxfn
 int 0x21
 mov [qqq_han], ax
 ;sbb ax, ax  ; AX:=0, ha OK ; AX:=$FFFF, ha hiba  ; !! Fail on I/O error.
-; blockread(f, buf, $FFFF, qqq_a);
+; blockread(f, buf, $FFFF, reg_ax);
 mov ah, 0x3f
 mov bx, [qqq_han]
 mov cx, 0xffff  ; !! Lower this to proect stack etc. against buffer overflow.
 mov dx, buf
 int 0x21
-mov [qqq_a], ax
+mov cx, ax  ; Save number of (compressed) bytes read to cx, for below.
 ; close(f);
 mov ah, 0x3e
 mov bx, [qqq_han]
 int 0x21
 
-mov cx, [qqq_a]
 mov dx, 0x1
 mov si, buf
 mov di, idx+2
@@ -243,7 +242,7 @@ dec cx
 lx_2c0:
 inc dx
 loop lx_2af
-mov [qqq_a], dx
+mov [qqq_a], dx  ; qqq.a := (number of quotes) + 1.
 llc:
 cmp byte [qqq_xch], 'C'
 jne strict short lx_2d1
