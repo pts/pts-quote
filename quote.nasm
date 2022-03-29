@@ -219,7 +219,7 @@ _start:
 	int 10h				;BH=0, Writeln
 	mov al, 00Ah
 	int 10h
-	mov si, hmsg			;Fejléc kiírása
+	mov si, headermsg			;Fejléc kiírása
 	call header
 
 l18:	mov ax, 3D00h
@@ -408,7 +408,7 @@ z5:	sub cx, byte 79
 lle:	mov ax, 00EC0h			;Üres sor=> Idézet vége, kilépés
 	mov bx, 0D9h			;└┘
 	call pline
-	mov si, fmsg
+	mov si, footermsg
 	call header
 	mov bx, 7
 	call fillc
@@ -551,5 +551,5 @@ ploop2:	dec ax
 ;=======Kezdőértékes adatok
 txtfn	db 'QUOTE.TXT',0
 idxfn	db 'QUOTE.IDX',0
-hmsg	db 34,'PotterSoftware Fortune Teller 2.6'  ; Size 34 should be 33.
-fmsg	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
+headermsg	db 34,'PotterSoftware Fortune Teller 2.6'  ; Size 34 should be 33.
+footermsg	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
