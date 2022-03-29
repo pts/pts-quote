@@ -36,9 +36,9 @@ const
   footermsg: string[44]= 'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.';
 
 var
-  buf: array[0..full+4] of char;
+  buf: array[0..full+4] of char;  { 1 less is enough, last element unused. }
   s: string absolute buf;
-  idx: array[0..24160] of word;
+  idx: array[0..24160] of word;  { 1 less is enough, last element unused. }
   qqq: record
     a,b,w: word;
     l, max, oldl: longint;
@@ -52,24 +52,32 @@ function GetNext: char; assembler;
   asm
 	cmp qqq.b, full+4                 { if qqq.b=full+4 then begin }
 	jne @88
-	xor di, offset buf		{ move(buf[full], buf[0], 4); }
+
+	{ This code is completely buggy. It should be:
+	  mov si, offset buf + full
+	  mov di, offset buf
+	  movsw
+	  movsw
+	}
+	xor di, offset buf		{ move(src:=buf[full], dst:=buf[0], 4); }
 	add di, full
 	mov ax, word ptr buf[0]
 	stosw
 	mov ax, word ptr buf[2]
 	stosw
+
 	{ blockread(f, buf[4], full, qqq.w); }
 	mov ah, 3Fh
 	mov bx, qqq.han
 	mov cx, full
 	mov dx, offset buf+4
 	int 21h
-	jnz @87
-	mov ax, 4CF1h
+	jnz @87  { Bug: should be jnc. }
+	mov ax, 4CF1h  { Abort on read error. }
 	int 21h
 @87:    mov qqq.b, 4                      { endif }
 
-@88:    mov bx, qqq.b			{ GetNext:=Buf[qqq.B];}
+@88:    mov bx, qqq.b			{ GetNext:=Buf[qqq.b];}
 	mov al, byte ptr buf[bx]
 	inc qqq.b				{ inc(qqq.b); }
 	add word ptr qqq.l,1		{ inc(qqq.l); }
@@ -385,7 +393,7 @@ lld:    { seek(f, qqq.l); }
         mov dx, offset s+1
         int 21h
         mov qqq.w, ax
-      
+
         cmp qqq.w, 0			{ Stop at EOF }
         je lle
         mov bx, 0			{ Look for #13 to determine length(s) }

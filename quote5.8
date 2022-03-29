@@ -35,6 +35,7 @@ jmp_near macro
   dw (#1)-$-2
 #em
 
+full= 04000h
 qqq_a= [018h]w
 qqq_w= [01Ch]w
 offset_qqq_l= 01Eh
@@ -107,7 +108,7 @@ mov bx,[02Eh]  ; @0x0189  8B1E2E00
 xor cx,cx  ; @0x018D  33C9
 xor dx,dx  ; @0x018F  33D2
 int 021h  ; @0x0191  CD21
-mov word [01Ah],04004h  ; @0x0193  C7061A000440
+mov word [01Ah],full+4  ; @0x0193  C7061A000440
 xor ax,ax  ; @0x0199  33C0
 mov [offset_qqq_l],ax  ; @0x019B  A31E00
 mov [offset_qqq_l+2],ax  ; @0x019E  A32000
@@ -115,7 +116,7 @@ mov [026h],ax  ; @0x01A1  A32600
 mov [028h],ax  ; @0x01A4  A32800
 mov word qqq_a,01h  ; @0x01A7  C70618000100
 lx_1ad:
-call lx_466  ; @0x01AD  E8B602
+call func_GetNext  ; @0x01AD  E8B602
 mov si,offset_buf-4  ; @0x01B0  BE6400
 add si,[01Ah]  ; @0x01B3  03361A00
 cmp word [si],0A0Dh  ; @0x01B7  813C0D0A
@@ -426,22 +427,30 @@ call lx_523  ; @0x045F  E8C100
 lx_462:
 mov ah,04Ch  ; @0x0462  B44C
 int 021h  ; @0x0464  CD21
-lx_466:
-cmp word [01Ah],04004h  ; @0x0466  813E1A000440
+
+; May ruin SI and possibly other registers.
+func_GetNext:
+cmp word [01Ah],full+4  ; @0x0466  813E1A000440
 jnz lx_498  ; @0x046C  752A
-xor di, offset_buf  ; db 083h, 0f7h, 068h  ; xor di,byte +068h  ; @0x046E  83F768
-add di,04000h  ; @0x0471  81C70040
-mov ax,[offset_buf]  ; @0x0475  A16800
-stosw  ; @0x0478  AB
-mov ax,[offset_buf+2]  ; @0x0479  A16A00
-stosw  ; @0x047C  AB
+; move(src:=buf[full], dst:=buf[0], 4);
+  ; This code is completely buggy. It should be:
+  ; mov si, offset_buf + full
+  ; mov di, offset_buf
+  ; movsw
+  ; movsw
+  xor di,offset_buf  ; db 083h, 0f7h, 068h  ; xor di,byte +068h  ; @0x046E  83F768
+  add di,full  ; @0x0471  81C70040
+  mov ax,[offset_buf]  ; @0x0475  A16800
+  stosw  ; @0x0478  AB
+  mov ax,[offset_buf+2]  ; @0x0479  A16A00
+  stosw  ; @0x047C  AB
 mov ah,03Fh  ; @0x047D  B43F
 mov bx,[02Eh]  ; @0x047F  8B1E2E00
-mov cx,04000h  ; @0x0483  B90040
+mov cx,full  ; @0x0483  B90040
 mov dx,offset_buf+4  ; @0x0486  BA6C00
 int 021h  ; @0x0489  CD21
-jnz lx_492  ; @0x048B  7505
-mov ax,04CF1h  ; @0x048D  B8F14C
+jnz lx_492  ; @0x048B  7505  ; Bug: should be jnc.
+mov ax,04CF1h  ; @0x048D  B8F14C  ; Abort on read error.
 int 021h  ; @0x0490  CD21
 lx_492:
 mov word [01Ah],04h  ; @0x0492  C7061A000400

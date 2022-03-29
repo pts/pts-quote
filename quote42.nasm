@@ -116,6 +116,8 @@ mov [qqq_l+2], ax
 mov [qqq_oldl], ax  ; oldl:=0
 mov [qqq_oldl+2], ax
 mov word [qqq_a], 0x1
+mov [buf+full], ax  ; Make sure we don't detect CRLF+CRLF at the beginning.
+
 lx_1b5:
 ; repeat
 call func_GetNext
@@ -140,7 +142,7 @@ mov [qqq_oldl], ax
 mov ax, [qqq_l+2]
 mov [qqq_oldl+2], ax  ;  end;
 lx_1fd:
-mov ax, [qqq_max]  ; until l=max 
+mov ax, [qqq_max]  ; until l=max
 mov dx, [qqq_max+2]
 cmp [qqq_l], ax
 jne strict short lx_1b5
@@ -462,20 +464,19 @@ ret  ; Exit to DOS.
 func_GetNext:
 cmp word [qqq_b], full+4  ; if qqq_b=full+4 then begin
 jne strict short lx_33
-xor di, buf  ; move(buf[full], buf[0], 4);  !! Why not mov di, buf? Why not add in one step below?
-add di, full
-mov ax, [buf]
-stosw
-mov ax, [buf+2]
-stosw
+; move(src:=buf[full], dst:=buf[0], 4);
+  mov si, buf + full
+  mov di, buf
+  movsw
+  movsw
 ; blockread(f, buf[4], full, qqq_w);
 mov ah, 0x3f
 mov bx, [qqq_han]
 mov cx, full
 mov dx, buf+4
 int 0x21
-jnz strict short lx_2d
-mov ax, 0x4cf1
+jnc strict short lx_2d
+mov ax, 0x4cf1  ; Abort on read error.
 int 0x21
 lx_2d:
 mov word [qqq_b], 0x4  ; endif
@@ -589,7 +590,7 @@ _data_end:
 
 ; _bss: (Uninitialized data.)
 full equ 16384  ; Just a size.
-buf equ _data_end+((_data_end-$$)&1)  ; array[0..full+4] of char;  Aligned.
+buf equ _data_end+((_data_end-$$)&1)  ; array[0..full+4-1] of char;  Aligned.
 var_s equ buf  ; string; overlaps buf
 idx equ buf+full+4+((buf+full+4-$$)&1)  ; array[0..24160] of word;  ; Aligned.
 qqq_a equ headermsg  ; word; overlaps headermsg.

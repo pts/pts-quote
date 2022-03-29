@@ -32,9 +32,9 @@ const
   footermsg: string[44]= 'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.';
 
 var
-  buf: array[0..full+4] of char;
+  buf: array[0..full+4-1] of char;
   s: string absolute buf;
-  idx: array[0..24160] of word;
+  idx: array[0..24160] of word;  { !! idx[0] is always 0. Get rid of it. }
   qqq: record
     a,b,w: word;
     l, max, oldl: longint;
@@ -48,20 +48,20 @@ function GetNext: char; assembler;
   asm
 	cmp qqq.b, full+4                 { if qqq.b=full+4 then begin }
 	jne @88
-	xor di, offset buf		{ move(buf[full], buf[0], 4); }
-	add di, full
-	mov ax, word ptr buf[0]
-	stosw
-	mov ax, word ptr buf[2]
-	stosw
+
+	mov si, offset buf + full  { move(buf[full], buf[0], 4); }
+	mov di, offset buf
+	movsw
+	movsw
+
 	{ blockread(f, buf[4], full, qqq.w); }
 	mov ah, 3Fh
 	mov bx, qqq.han
 	mov cx, full
 	mov dx, offset buf+4
 	int 21h
-	jnz @87
-	mov ax, 4CF1h
+	jnc @87
+	mov ax, 4CF1h  { Abort on read error. }
 	int 21h
 @87:    mov qqq.b, 4                      { endif }
 
@@ -168,6 +168,10 @@ begin { Főprogram }
 	mov al, ' '
 @94:    and al, 255-32
 	mov qqq.xch, al
+	mov ax, ds
+	{ es will remain this way for the rest of the run.
+	  It affects es:, stosb, stosw, scasb, scasw, movsb, movsw, cmpsb, cmpsw. }
+	mov es, ax
 	{ qqq.w:=XReset(IdxFn); }
 	mov ax, 3D00h { Open for Read Only, C-Mode }
 	mov dx, offset idxfn
@@ -207,6 +211,8 @@ begin { Főprogram }
 	mov word ptr qqq.oldl, ax       	{oldl:=0 }
 	mov word ptr qqq.oldl[2], ax
 	mov qqq.a, 1                    	{ a:=1 }
+	mov [offset buf+full], ax  { Make sure we don't detect CRLF+CRLF at the beginning. }
+
 					{repeat }
 @81:    call GetNext
 	mov si, offset buf-4
@@ -248,8 +254,6 @@ begin { Főprogram }
 	mov cx, qqq.a
 	dec cx
 	mov si, offset idx+2
-	mov ax, ds
-	mov es, ax
 	mov di, offset buf
 	xor dx, dx
 @83:    lodsw
@@ -306,8 +310,6 @@ lls:    { XReset(IDXFN); }
 	mov dx, 1
 	mov si, offset buf
 	mov di, offset idx+2
-	mov ax, ds
-	mov es, ax
 @85:    lodsb
 	mov ah, 0
 	stosw
@@ -403,7 +405,7 @@ lld:    { seek(f, qqq.l); }
         mov dx, offset s+1
         int 21h
         mov qqq.w, ax
-      
+
         cmp qqq.w, 0			{ Stop at EOF }
         je lle
         mov bx, 0			{ Look for #13 to determine length(s) }
