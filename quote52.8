@@ -34,6 +34,7 @@ jmp_near macro
   dw (#1)-$-2
 #em
 
+full= 04000h
 qqq_a= [018h]w
 qqq_w= [01Ch]w
 offset_qqq_l= 01Eh
@@ -100,15 +101,17 @@ mov bx,[02Eh]  ; @  8B1E2E00
 xor cx,cx  ; @  33C9
 xor dx,dx  ; @  33D2
 int 021h  ; @  CD21
-mov word [01Ah],04004h  ; @  C7061A000440
+mov word [01Ah],full+4  ; @  C7061A000440
 xor ax,ax  ; @  33C0
 mov [offset_qqq_l],ax  ; @  A31E00
 mov [offset_qqq_l+2],ax  ; @  A32000
 mov [026h],ax  ; @  A32600
 mov [028h],ax  ; @  A32800
 mov word qqq_a,01h  ; @  C70618000100
+mov [offset_buf+full], ax  ; Make sure we don't detect CRLF+CRLF at the beginning.
+
 lx_1ad:
-call lx_466  ; @  E8B602
+call func_GetNext  ; @  E8B602
 mov si,offset_buf-4  ; @  BE6400
 add si,[01Ah]  ; @  03361A00
 cmp word [si],0A0Dh  ; @  813C0D0A
@@ -427,23 +430,23 @@ call lx_523  ; @  E8C100
 lx_462:
 mov ah,04Ch  ; @  B44C
 int 021h  ; @  CD21
-lx_466:
-cmp word [01Ah],04004h  ; @  813E1A000440
+
+; May ruin SI and possibly other registers.
+func_GetNext:
+cmp word [01Ah],full+4  ; @  813E1A000440
 jnz lx_498  ; @  752A
-; !! TODO: Use `mov di' instead of `xor di', combine with the `add', fix it everywhere.
-xor di, offset_buf  ; db 083h, 0f7h, 068h  ; xor di,byte +068h  ; @  83F768
-add di,04000h  ; @  81C70040
-mov ax,[offset_buf]  ; @  A16800
-stosw  ; @  AB
-mov ax,[offset_buf+2]  ; @  A16A00
-stosw  ; @  AB
+; move(src:=buf[full], dst:=buf[0], 4);
+  mov si, offset_buf + full
+  mov di, offset_buf
+  movsw
+  movsw
 mov ah,03Fh  ; @  B43F
 mov bx,[02Eh]  ; @  8B1E2E00
-mov cx,04000h  ; @  B90040
+mov cx,full  ; @  B90040
 mov dx,offset_buf+4  ; @  BA6C00
 int 021h  ; @  CD21
-jnz lx_492  ; @  7505
-mov ax,04CF1h  ; @  B8F14C
+jnc lx_492  ; @  7505
+mov ax,04CF1h  ; @  B8F14C  ; Abort on read error.
 int 021h  ; @  CD21
 lx_492:
 mov word [01Ah],04h  ; @  C7061A000400
