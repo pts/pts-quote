@@ -38,15 +38,23 @@ jmp_near macro
 qqq_a= [018h]w
 qqq_w= [01Ch]w
 offset_qqq_l= 01Eh
+offset_buf= 068h
+offset_var_s= offset_buf
 
 _code:
 _start:
 mov ax,ds  ; @0x0100  8CD8
 add ax,seg_delta  ; @0x0102  055400
 mov ds,ax  ; @0x0105  8ED8
+; Here is how we could increase the memory usage to 68 KiB (67 KiB needed for code
+; and data + 1 KiB for stack):
+; mov ah, 04Ah  ; https://stanislavs.org/helppc/int_21-4a.html
+; mov bx, 01100h  ; Number of bytes needed == 0x1100h * 16, that's 68 KiB.
+; int 21h
+; Then abort if CF is set.
 mov ax,ss  ; @0x0107  8CD0
-add ax,0100h  ; @0x0109  050001
-mov ss,ax  ; @0x010C  8ED0  ; !! Why modify ss? Do we need extra stack space?
+add ax,0100h  ; @0x0109  050001  ; 1 KiB of stack at the end of the 68 KiB.
+mov ss,ax  ; @0x010C  8ED0
 mov bh,00h  ; @0x010E  B700
 mov ax,0E0Dh  ; @0x0110  B80D0E
 int 010h  ; @0x0113  CD10
@@ -108,7 +116,7 @@ mov [028h],ax  ; @0x01A4  A32800
 mov word qqq_a,01h  ; @0x01A7  C70618000100
 lx_1ad:
 call lx_466  ; @0x01AD  E8B602
-mov si,064h  ; @0x01B0  BE6400
+mov si,offset_buf-4  ; @0x01B0  BE6400
 add si,[01Ah]  ; @0x01B3  03361A00
 cmp word [si],0A0Dh  ; @0x01B7  813C0D0A
 jnz lx_1f3  ; @0x01BB  7536
@@ -147,7 +155,7 @@ dec cx  ; @0x021C  49
 mov si,0406Fh  ; @0x021D  BE6F40
 mov ax,ds  ; @0x0220  8CD8
 mov es,ax  ; @0x0222  8EC0
-mov di,068h  ; @0x0224  BF6800
+mov di,offset_buf  ; @0x0224  BF6800
 xor dx,dx  ; @0x0227  33D2
 lx_229:
 lodsw  ; @0x0229  AD
@@ -161,7 +169,7 @@ stosw  ; @0x0237  AB
 lx_238:
 loop lx_229  ; @0x0238  E2EF
 mov qqq_a,di  ; @0x023A  893E1800
-sub word qqq_a, 068h  ; db 083h, 02eh, 018h, 0, 068h  ; sub word [018h], byte +068h  ; @0x023E  832E180068
+sub word qqq_a, offset_buf  ; db 083h, 02eh, 018h, 0, 068h  ; sub word [018h], byte +068h  ; @0x023E  832E180068
 mov ah,03Ch  ; @0x0243  B43C
 mov cx,00h  ; @0x0245  B90000
 mov dx,idxfn_data  ; @0x0248  BA0C00
@@ -176,7 +184,7 @@ lx_259:
 mov ah,040h  ; @0x0259  B440
 mov bx,[02Eh]  ; @0x025B  8B1E2E00
 mov cx,qqq_a  ; @0x025F  8B0E1800
-mov dx,068h  ; @0x0263  BA6800
+mov dx,offset_buf  ; @0x0263  BA6800
 int 021h  ; @0x0266  CD21
 mov ah,03Eh  ; @0x0268  B43E
 mov bx,[02Eh]  ; @0x026A  8B1E2E00
@@ -193,7 +201,7 @@ lx_283:
 mov ah,03Fh  ; @0x0283  B43F
 mov bx,[02Eh]  ; @0x0285  8B1E2E00
 mov cx,0FFFFh  ; @0x0289  B9FFFF
-mov dx,068h  ; @0x028C  BA6800
+mov dx,offset_buf  ; @0x028C  BA6800
 int 021h  ; @0x028F  CD21
 mov qqq_a,ax  ; @0x0291  A31800
 mov ah,03Eh  ; @0x0294  B43E
@@ -201,7 +209,7 @@ mov bx,[02Eh]  ; @0x0296  8B1E2E00
 int 021h  ; @0x029A  CD21
 mov cx,qqq_a  ; @0x029C  8B0E1800
 mov dx,01h  ; @0x02A0  BA0100
-mov si,068h  ; @0x02A3  BE6800
+mov si,offset_var_s  ; @0x02A3  BE6800
 mov di,0406Fh  ; @0x02A6  BF6F40
 mov ax,ds  ; @0x02A9  8CD8
 mov es,ax  ; @0x02AB  8EC0
@@ -291,7 +299,7 @@ int 021h  ; @0x0348  CD21
 mov ah,03Fh  ; @0x034A  B43F
 mov bx,[02Eh]  ; @0x034C  8B1E2E00
 mov cx,0FFh  ; @0x0350  B9FF00
-mov dx,069h  ; @0x0353  BA6900
+mov dx,offset_var_s+1  ; @0x0353  BA6900
 int 021h  ; @0x0356  CD21
 mov qqq_w,ax  ; @0x0358  A31C00
 cmp ax,00h  ; @0x035B  3D0000
@@ -299,7 +307,7 @@ jnz lx_363  ; @0x035E  7503
 jmp_near lx_448  ; @0x0360  E9E500
 lx_363:
 mov bx,00h  ; @0x0363  BB0000
-mov si,069h  ; @0x0366  BE6900
+mov si,offset_var_s+1  ; @0x0366  BE6900
 lx_369:
 or bh,bh  ; @0x0369  0AFF
 jnz lx_375  ; @0x036B  7508
@@ -310,13 +318,13 @@ jmp short lx_369  ; @0x0373  EBF4
 lx_375:
 jmp_near lx_462  ; @0x0375  E9EA00
 lx_378:
-mov [068h],bl  ; @0x0378  881E6800
+mov [offset_var_s],bl  ; @0x0378  881E6800
 inc bx  ; @0x037C  43
 inc bx  ; @0x037D  43
 add [offset_qqq_l],bx  ; @0x037E  011E1E00
 adc word [offset_qqq_l+2], 0  ; db 083h, 016h, offset_qqq_l+2, 0, 0 ; adc word [offset_qqq_l+2],byte +00h  ; @0x0382  8316200000
 mov cx,ds  ; @0x0387  8CD9
-mov si,068h  ; @0x0389  BE6800
+mov si,offset_var_s  ; @0x0389  BE6800
 mov qqq_w,si  ; @0x038C  89361C00
 lodsb  ; @0x0390  AC
 cmp al,00h  ; @0x0391  3C00
@@ -421,16 +429,16 @@ int 021h  ; @0x0464  CD21
 lx_466:
 cmp word [01Ah],04004h  ; @0x0466  813E1A000440
 jnz lx_498  ; @0x046C  752A
-xor di, 068h  ; db 083h, 0f7h, 068h  ; xor di,byte +068h  ; @0x046E  83F768
+xor di, offset_buf  ; db 083h, 0f7h, 068h  ; xor di,byte +068h  ; @0x046E  83F768
 add di,04000h  ; @0x0471  81C70040
-mov ax,[068h]  ; @0x0475  A16800
+mov ax,[offset_buf]  ; @0x0475  A16800
 stosw  ; @0x0478  AB
-mov ax,[06Ah]  ; @0x0479  A16A00
+mov ax,[offset_buf+2]  ; @0x0479  A16A00
 stosw  ; @0x047C  AB
 mov ah,03Fh  ; @0x047D  B43F
 mov bx,[02Eh]  ; @0x047F  8B1E2E00
 mov cx,04000h  ; @0x0483  B90040
-mov dx,06Ch  ; @0x0486  BA6C00
+mov dx,offset_buf+4  ; @0x0486  BA6C00
 int 021h  ; @0x0489  CD21
 jnz lx_492  ; @0x048B  7505
 mov ax,04CF1h  ; @0x048D  B8F14C
@@ -439,7 +447,7 @@ lx_492:
 mov word [01Ah],04h  ; @0x0492  C7061A000400
 lx_498:
 mov bx,[01Ah]  ; @0x0498  8B1E1A00
-mov al,[bx+068h]  ; @0x049C  8A4768
+mov al,[bx+offset_buf]  ; @0x049C  8A4768
 inc word [01Ah]  ; @0x049F  FF061A00
 add word [offset_qqq_l], 1  ; db 083h, 006h, 01eh, 0, 1 ; add word [offset_qqq_l],byte +01h  ; @0x04A3  83061E0001
 adc word [offset_qqq_l+2], 0  ; db 083h, 016h, offset_qqq_l+2, 0, 0 ; adc word [offset_qqq_l+2],byte +00h  ; @0x04A8  8316200000
