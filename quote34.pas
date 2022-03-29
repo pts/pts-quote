@@ -244,7 +244,8 @@ begin { Főprogram }
 	cmp word ptr qqq.l[2], dx
 	jne @81
 
-	{ Close(f); }
+	{ Now qqq.a == (number of quotes) + 1. }
+	{ close(f); }
 	mov ah, 3Eh
 	mov bx, qqq.han
 	int 21h
@@ -265,8 +266,7 @@ begin { Főprogram }
 	or ax, 11110000b
 	stosw
 @84:    loop @83
-	mov qqq.a, di
-	sub qqq.a, offset buf
+	sub di, offset buf  { DI := number of compressed bytes to write. }
 
         { XRewrite(IDXFN); }
         mov ah, 3Ch { Create file }
@@ -276,10 +276,10 @@ begin { Főprogram }
 	jnc @91
         mov ax, 4CF0h
 	int 21h { Fatal error }
-@91:    { blockwrite(f, buf, qqq.a); }
+@91:    { blockwrite(f, buf, compressed_size); }
 	mov ah, 40h
 	mov bx, qqq.han
-	mov cx, qqq.a
+	mov cx, di
 	mov dx, offset buf
 	int 21h
 	{ close(f); }
@@ -294,19 +294,18 @@ lls:    { XReset(IDXFN); }
 	mov dx, offset idxfn
 	int 21h
 	mov qqq.han, ax
-	{ blockread(f, buf, $FFFF, qqq.a); }
+	{ blockread(f, buf, $FFFF, reg_ax); }
 	mov ah, 3Fh
 	mov bx, qqq.han
 	mov cx, $FFFF
         mov dx, offset buf
         int 21h
-	mov qqq.a, ax  { Save number of (compressed) bytes read to qqq.a. }
+	mov cx, ax  { Save number of (compressed) bytes read to cx, for below. }
 	{ close(f); }
 	mov ah, 3Eh
 	mov bx, qqq.han
 	int 21h
 
-	mov cx, qqq.a
 	mov dx, 1
 	mov si, offset buf
 	mov di, offset idx+2
@@ -324,7 +323,7 @@ lls:    { XReset(IDXFN); }
 	dec cx
 @86:    inc dx
 	loop @85
-	mov qqq.a, dx
+	mov qqq.a, dx  { qqq.a := (number of quotes) + 1. }
 llc:    cmp qqq.xch, 'C'
 	je llf
 
@@ -519,7 +518,7 @@ lle:    push $D9C0	{ └┘ }
 	push ds
 	push offset footermsg
 	call Header
-	mov ah, 3Eh      { Close(F); }
+	mov ah, 3Eh      { close(F); }
 	mov bx, qqq.han
 	int 21h
 llf:end; { ASM Statement. Good bye, reader. }
