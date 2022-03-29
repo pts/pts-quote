@@ -31,7 +31,7 @@ History of code written in 1996 and updated in 2022:
 * 2.34 From 2.33 with random number generator replaced with a faster one.
        Released on 2022-03-27.
        quote34.pas is Turbo Pascal 7.0 source code with just inline assembly.
-       quote34.exe.orig is 2848 bytes.
+       quote34.exe.orig is ~2832 bytes.
 * 2.40 Turbo Pascal 7.0 inline assembly ported to A86 3.22 assembly.
        Source code and .exe program binary have been lost.
 * 2.41 Turbo Pascal 7.0 inline assembly ported to NASM 0.98.39 assembly
@@ -41,7 +41,7 @@ History of code written in 1996 and updated in 2022:
 * 2.42 From 2.41 random number generator replaced with a faster one.
        Released on 2022-03-27.
        quote42.nasm is NASM 0.98.39 source code.
-       quote42n.com.orig is 1226 bytes, built on 2022-03-27.
+       quote42n.com.orig is ~1226 bytes, built on 2022-03-27.
 * 2.50 ANSI.SYS is no longer needed for color display.
        Released in PotterSoftware Entry Pack. Random number generation is
        very slow.
@@ -52,7 +52,7 @@ History of code written in 1996 and updated in 2022:
 * 2.52 From 2.50 random number generator replaced with a faster one.
        Released on 2022-03-27.
        quote52.8 is A86 3.22 source code, most of it reverse engineered.
-       quote52.com.orig is 1208 bytes.
+       quote52.com.orig is ~1208 bytes.
 * 2.60 QUOTE.IDX index file format redesigned, file is much smaller:
        just 8% of before, just 0.976% of QUOTE.TXT.
        Source code and .com program binary have been lost.
@@ -64,7 +64,11 @@ History of code written in 1996 and updated in 2022:
        quote.8 is A86 3.22 .. 4.05 source code.
        quote.nasm is NASM 0.98.39 source code.
        quote.com.orig is 794 bytes.
-* 2.63 quotex.nasm is under development since 2022-03-18.
+* 2.63 From 2.62 some bugfixes and compatibility improvements with previous versions.
+       Work started on 2022-03-30.
+       quote63.nasm is NASM 0.98.39 source code.
+       quote63.com.orig is ~820 bytes.
+* 2.64 quotex.nasm is under development since 2022-03-18, it's not released.
        TODO: 8086 support
        TODO: better random seed algorithm
        TODO: report error if empty or more than 65535 quotes
