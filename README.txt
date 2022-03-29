@@ -31,7 +31,7 @@ File format of the text file quote.txt:
 * Quotes are separated by an empty line (i.e. CRLF + CRLF).
 * There must be an empty line (i.e. CRLF + CRLF at the end of the file.
 * Quotes must not be empty (i.e. CRLF + CRLF must not be followed by CRLF).
-* Each quote must fit to 4096 bytes (including the trailing CRLF + CRLF).
+* Each quote must fit to 4095 bytes (including the trailing CRLF + CRLF).
 * If a line starts with --, it will be right-aligned without the -- ,
   and it will be highlighted.
 * If a line starts with -&, it will be center-aligned without the -& ,
@@ -50,8 +50,26 @@ About the index file quote.idx:
 * The index file contains file offset information to make it faster to find
   the random quote in quote.txt. The index file is binary.
 * The file format of the index file depends on the version of the program.
-  Versions 2.30 .. 2.5? use a verbose format, versions since 2.60 use a
-  compact format. Delete quote.idx between using different versions.
+  Versions 2.30 .. 2.5? use the verbose format 5, versions since 2.60 use
+  the compact format 6. Delete quote.idx between using different versions.
+* Format 5 (2..30 .. 2.5?) of quote.idx index file:
+  * For each quote, encode its byte size (including the trailing CRLF +
+    CRLF) as 1 or 2 8-bit unsigned integers. If the size is at most 239,
+    emit it as 1 8-bit unsigned integer, otherwise emit 240 + the high 4
+    bits as the first 8-bit unsigned integer, and then emit the low 8 bits
+    as the second 8-bit unsigned integer. Equivalently, for decoding: read
+    an 8-bit unsigned integer to hi. If it's at most 239, use it as the byte
+    size of the next quote, otherwise read another 8-bit unsigned integer to
+    hi, and use ((hi - 240) * 256 + lo) as the byte size of the next quote.
+* Format 6 (2.6? ..) of quote.idx index file:
+  * Emit the total number of quotes, as 2 bytes containing an 16-bit
+    unsigned little-endian integer.
+  * For each block of 1024 bytes (the last block may be shorter) in
+    quote.txt, emit the number of quotes whose first byte this block
+    contains, as a byte containing an 8-bit unsigned integer.
+  * An invariant: the first 2 bytes (as a 16-bit unsigned little-endian
+    integer) equals to the sum of the subsequent bytes (as 8-bit unsigned
+    integers).
 
 pts-quote is free software released under the GNU GPL v2 license. There is
 NO WARRANTY. Use at your own risk.
