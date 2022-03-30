@@ -254,7 +254,7 @@ mov [qqq_l], ax  ; L kezdőoffszet kiszámolása
 mov [qqq_l+2], ax
 mov si, [qqq_a]
 test si, si
-jz after_random  ; If there are 0 quotes, print from the beginning of txtfn.
+jz strict short after_random  ; If there are 0 quotes, print from the beginning of txtfn.
 dec si  ; SI := Number of quotes.
 
 ; DX:=random(SI);  Then 0 <= SI < DX.
@@ -287,7 +287,7 @@ mov bx, dx
 mul si
 add ax, bx
 adc dx, bp  ; DX:=random(SI)
-jz after_random  ; If the chosen random number is 0, print from the beginning of txtfn.
+jz strict short after_random  ; If the chosen random number is 0, print from the beginning of txtfn.
 
 mov si, idx
 add si, dx
