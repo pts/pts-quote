@@ -67,108 +67,6 @@
 ;   `int 20h' instruction), so that a simple `ret' will exit the program.
 ;
 
-; --- Library for emulating byte-by-byte A86 output.
-;
-; Usage: instead of e.g. `a86_add ax, bx', use `a86_add ax, bx'.
-
-%define _W_ax 0
-%define _W_cx 1
-%define _W_dx 2
-%define _W_bx 3
-%define _W_sp 4
-%define _W_bp 5
-%define _W_si 6
-%define _W_di 7
-
-%define _B_al 0
-%define _B_cl 1
-%define _B_dl 2
-%define _B_bl 3
-%define _B_ah 4
-%define _B_ch 5
-%define _B_dh 6
-%define _B_bh 7
-
-%define _RI_add  0x00
-%define _RI_or   0x08
-%define _RI_adc  0x10
-%define _RI_sbb  0x18
-%define _RI_and  0x20
-%define _RI_sub  0x28
-%define _RI_xor  0x30
-%define _RI_cmp  0x38
-%define _RI_test 0x84
-%define _RI_xchl 0x86  ; Long (2-byte) xchg. Not a real instruction.
-%define _RI_xchg 0x86
-%define _RI_mov  0x88
-
-%define _XI_add  1
-%define _XI_or   1
-%define _XI_adc  1
-%define _XI_sbb  1
-%define _XI_and  1
-%define _XI_sub  1
-%define _XI_xor  1
-%define _XI_cmp  1
-%define _XI_test 2
-%define _XI_xchl 2
-%define _XI_xchg 4
-%define _XI_mov  0
-
-%macro a86 3  ; a86 <instruction>, <destination-register>, <source-register>
-; This macro assumes __BITS__ == 16. (Older versions of NASM don't support __BITS__.)
-%ifdef _RI_%1
-%ifdef _W_%2
-%ifdef _W_%3
-%if (_XI_%1) == 4 && ((_W_%2) == 0 || (_W_%3) == 0)
-db 0x90 | (_W_%2) | (_W_%3)  ; 1-byte xchg with ax.
-%elif (_XI_%1) < 2 && (((_W_%2) >> 1) ^ ((_W_%3) >> 1) ^ (_XI_%1)) & 1
-db (_RI_%1) | 3, 0xc0 | (_W_%3) | (_W_%2) << 3
-%else
-db (_RI_%1) | 1, 0xc0 | (_W_%2) | (_W_%3) << 3  ; nasm.
-%endif
-%else
-%error word-size register %3 unknown
-db 0x90, 0x90
-%endif
-%else
-%ifdef _B_%2
-%ifdef _B_%3
-%if (_XI_%1) < 2 && (((_B_%2) >> 1) ^ ((_B_%3) >> 1) ^ (_XI_%1)) & 1
-db (_RI_%1) | 2, 0xc0 | (_B_%3) | (_B_%2) << 3
-%else
-db (_RI_%1), 0xc0 | (_B_%2) | (_B_%3) << 3  ; nasm.
-%endif
-%else
-%error byte-size register %3 unknown
-db 0x90, 0x90
-%endif
-%else
-%error register %2 unknown
-db 0x90, 0x90
-%endif
-%endif
-%else
-%error instruction %1 unknown
-db 0x90, 0x90
-%endif
-%endmacro
-
-%define a86_add  a86 add,
-%define a86_or   a86 or,
-%define a86_adc  a86 adc,
-%define a86_sbb  a86 sbb,
-%define a86_and  a86 and,
-%define a86_sub  a86 sub,
-%define a86_xor  a86 xor,
-%define a86_cmp  a86 cmp,
-%define a86_test a86 test,
-%define a86_xchl a86 xchl,
-%define a86_xchg a86 xchg,
-%define a86_mov  a86 mov,
-
-; ---
-
 %macro my_jcxz_strict_short 1
 ; `jcxz strict short %1' doesn't work: error: mismatch in operand sizes
 ; `jcxz %1' works, but the shortness is not explicit.
@@ -203,7 +101,7 @@ cpu 8086
 
 ;=======Kód
 _start:
-	a86_xor bx, bx
+	xor bx, bx
 	mov idxc, bx
 
 	cmp param, 2
@@ -230,7 +128,7 @@ nc1:	push ax				;Save file handle
 	jnz gen
 	
 ;=======Beolvassuk az indextáblát
-	a86_mov bx, ax
+	mov bx, ax
 	mov ah, 3Fh
 	mov cx, idxlen+2
 	mov dx, offset_idxc
@@ -252,7 +150,7 @@ l2:	mov ah, 3Fh
 	mov cx, 1024
 	mov dx, offset_buffer+4
 	int 21h
-	a86_mov cx, ax
+	mov cx, ax
 	my_jcxz_strict_short l1
 	mov al, 0
 
@@ -288,12 +186,12 @@ l1:	cmp param, 5
 	je l19
 	push bx				;File handle elmentése
 	mov ah, 3Ch
-	a86_xor cx, cx			;Attribútumot nem kap
+	xor cx, cx			;Attribútumot nem kap
 	mov dx, idxfn
 	int 21h				;Open
 	jnc nc2
 	call error
-nc2:	a86_mov bx, ax
+nc2:	mov bx, ax
 	mov ah, 40h
 	lea cx, [di-offset_idxc]	;CX:=DI-ofs(index)=indextábla_hossza
 	mov dx, offset_idxc
@@ -310,39 +208,39 @@ ne4:
 l5:	mov ah, 0
 	int 1Ah				;Get time-random seed in CX:DX
 	push bx
-	a86_xor bp, bp
+	xor bp, bp
 	mov ax, cs
-	a86_add ax, dx			;Modify seed
-	a86_mov bx, ax
+	add ax, dx			;Modify seed
+	mov bx, ax
 	mov dx, 8405h
 	mul dx
 	shl bx, 1
 	shl bx, 1
 	shl bx, 1
-	a86_add ch, cl
-	a86_add dx, bx
-	a86_add dx, cx
+	add ch, cl
+	add dx, bx
+	add dx, cx
 	shl cx, 1
 	shl cx, 1
-	a86_add dx, cx
-	a86_add dh, bl
+	add dx, cx
+	add dh, bl
 	my_add_ax_immediate 1		;Modifies CF (inc ax doesn't).
-	a86_adc dx, bp			;BP:AX
-	a86_mov bx, dx
+	adc dx, bp			;BP:AX
+	mov bx, dx
 	mul idxc
-	a86_mov ax, bx
-	a86_mov bx, dx
+	mov ax, bx
+	mov bx, dx
 	mul idxc
-	a86_add ax, bx
-	a86_adc dx, bp			;DX:=random(nr_of_quotes)
+	add ax, bx
+	adc dx, bp			;DX:=random(nr_of_quotes)
 	pop bx
 
 	mov si, offset_index
 	mov ah, 0
 l7:	lodsb
-	a86_cmp dx, ax
+	cmp dx, ax
 	js l6
-	a86_sub dx, ax
+	sub dx, ax
 	jmp short l7
 
 l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).  !! Why +2?
@@ -350,8 +248,8 @@ l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).  !! Why +2?
 	mov bp, 0A0Dh
 	mov ax, 4200h
 	jns l8
-	a86_xor dx, dx
-	a86_xor cx, cx
+	xor dx, dx
+	xor cx, cx
 	int 21h				;!!Why special-case seeking to the beginning?
 	jnc nc5
 	call error			;Error seeking to the beginning.
@@ -361,10 +259,10 @@ nc5:	mov dx, offset_buffer+1024	;!!Why not just offset_buffer? What's in the beg
 	jmp strict near l20
 
 l8:	; Set CX:DX to 1024 * SI.
-	a86_mov dx, si
+	mov dx, si
 	mov cl, 10
 	rol dx, cl
-	a86_mov cx, dx
+	mov cx, dx
 	and cx, ((1 << 10) - 1)
 	and dx, ((1 << 6) - 1) << 10
 	int 21h				;Seek to 1024 * SI, to the beginning of the previous block.
@@ -439,7 +337,7 @@ yd:     mov dl, 0			;AnsiCh=dl is 0 by default
 	add qqqqw, byte 2		;Ha AnsiCh<>0 => s[1,2] kihagyása
 	dec ax
 	dec ax
-	a86_mov dx, ax
+	mov dx, ax
 	xchg [si+1], dl			;length odébbmásolása, új AnsiCh
 yc:     mov ah, 0
 	mov bx, 78
@@ -447,7 +345,7 @@ yc:     mov ah, 0
 	cmp dl, 0
 	jne ya
 	mov al, 0
-	a86_xor bx, bx
+	xor bx, bx
 	mov cx, 7
 	jmp strict near yb
 ya:     cmp dl, '&'
@@ -455,34 +353,34 @@ ya:     cmp dl, '&'
 	mov bx, 39
 	shr ax, 1
 	mov cx, 10
-yb:     a86_sub bx, ax
+yb:     sub bx, ax
 	mov qqqqbefore, bx
 	mov ax, 0Eh*256+0b3h		;'│' Start the line
 	mov bh, 0
 	int 10h
-	a86_mov bx, cx
+	mov bx, cx
 	mov cx, 78
 	call filld
 y6:     				;Display the string "s" with "before"
 	mov si, qqqqw
 	lodsb
-	a86_mov cl, al
+	mov cl, al
 	mov ch, 0
-	a86_mov dx, cx
+	mov dx, cx
 	mov bh, 0
 	mov cx, qqqqbefore
 	my_jcxz_strict_short y5
 	mov ax, 256*0Eh+' '
 y2:     int 10h
 	loop y2
-y5:     a86_mov cx, dx
+y5:     mov cx, dx
 	mov ah, 0Eh
 y3:     lodsb
 	int 10h
 	loop y3
 y8:     mov cx, 78
 	sub cx, qqqqbefore
-	a86_sub cx, dx
+	sub cx, dx
 	my_jcxz_strict_short y7
 	mov ax, 0Eh*256+' '
 y4:     int 10h
@@ -505,11 +403,11 @@ y71:    mov bx, 16
 	call ploop
 	lodsb
 	mov ah, 0
-	a86_mov dx, ax
+	mov dx, ax
 	shr ax, 1
 	mov cx, 25
-	a86_sub cx, ax
-	a86_mov bx, cx
+	sub cx, ax
+	mov bx, cx
 	mov ax, 0Eh*256+' '
 	mov bh, 0
 	my_jcxz_strict_short y74
@@ -521,8 +419,8 @@ y76:    lodsb
 	int 10h
 	loop y76
 	mov cx, 50
-	a86_sub cx, bx
-	a86_sub cx, dx
+	sub cx, bx
+	sub cx, dx
 	mov al, ' '
 	my_jcxz_strict_short y78
 y77:    int 10h
@@ -541,7 +439,7 @@ pline:	int 10h				;Hívás: AH=0Eh, AL=1. ch, BX=2. ch
 	mov al, 196			;'─'
 y70:    int 10h
 	loop y70
-	a86_mov al, bl
+	mov al, bl
 	int 10h
 	ret
 
