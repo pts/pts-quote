@@ -182,12 +182,6 @@ db 0x90, 0x90
 db 0xe3, (%1)-2-$
 %endmacro
 
-; Independent of `nasm -O0' vs `nasm -O9'.
-%macro my_add_ax_immediate 1
-db 5
-dw (%1)
-%endmacro
-
 org 0x100
 bits 16
 cpu 286  ; Some instructions below (such as higher-than-1 bit shifts) need 286.
@@ -331,7 +325,7 @@ l5:	mov ah, 0
 	a86_add dx, cx
 	a86_add dh, bl
 	shl cx, 5
-	my_add_ax_immediate 1		;Modifies CF (inc ax doesn't).
+	add ax, strict word 1		;Modifies CF (inc ax doesn't). `strict word' to make `nasm -O0' and `nasm -O9' the same.
 	a86_adc dx, bp			;BP:AX
 	a86_mov bx, dx
 	mul idxc
