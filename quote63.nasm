@@ -93,7 +93,7 @@ _start:
 	mov idxc, bx
 
 	cmp param, 2
-	je l18
+	je strict short l18
 	mov ax, 0E0Dh
 	int 10h				;BH=0, Writeln
 	mov al, 00Ah
@@ -104,7 +104,7 @@ _start:
 l18:	mov ax, 3D00h
 	mov dx, txtfn
 	int 21h				;Open quote.txt
-	jnc nc1
+	jnc strict short nc1
 	call error
 nc1:	push ax				;Save file handle
 
@@ -113,7 +113,7 @@ nc1:	push ax				;Save file handle
 	int 21h
 	mov dl, param
 	adc dl, 0
-	jnz gen
+	jnz strict short gen
 	
 ;=======Beolvassuk az indextáblát
 	mov bx, ax
@@ -143,11 +143,11 @@ l2:	mov ah, 3Fh
 	mov al, 0
 
 l4:	cmp [si], bp
-	jne l3
+	jne strict short l3
 	cmp [si+2], bp
-	jne l3
+	jne strict short l3
 	cmp byte[si+4], 13
-	jne ne3
+	jne strict short ne3
 	call error
 ne3:	inc idxc			;Megszámolunk egy idézetet
 	inc ax				;Az 1K-kon belül is
@@ -161,7 +161,7 @@ l3:	inc si
 	mov [offset_buffer+2], ax
 	mov si, offset_buffer
 	cmp di, idxlen
-	jne l2
+	jne strict short l2
 	push di				;Push error code
 
 error:  mov al, 7			;General error message
@@ -171,13 +171,13 @@ error:  mov al, 7			;General error message
 	int 21h
 
 l1:	cmp param, 5
-	je l19
+	je strict short l19
 	push bx				;File handle elmentése
 	mov ah, 3Ch
 	xor cx, cx			;Attribútumot nem kap
 	mov dx, idxfn
 	int 21h				;Open
-	jnc nc2
+	jnc strict short nc2
 	call error
 nc2:	mov bx, ax
 	mov ah, 40h
@@ -188,7 +188,7 @@ nc2:	mov bx, ax
 	int 21h				;Close .idx
 	pop bx				;Most: BX=handle of quote.txt
 l19:	cmp param, 2
-	jne ne4
+	jne strict short ne4
 	ret				;int 20h
 ne4:
 
@@ -227,19 +227,19 @@ l5:	mov ah, 0
 	mov ah, 0
 l7:	lodsb
 	cmp dx, ax
-	js l6
+	js strict short l6
 	sub dx, ax
-	jmp short l7
+	jmp strict short l7
 
 l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).  !! Why +2?
 	push dx				;Now: DX: quote index within the block.
 	mov bp, 0A0Dh
 	mov ax, 4200h
-	jns l8
+	jns strict short l8
 	xor dx, dx
 	xor cx, cx
 	int 21h				;!!Why special-case seeking to the beginning?
-	jnc nc5
+	jnc strict short nc5
 	call error			;Error seeking to the beginning.
 nc5:	mov dx, offset_buffer+1024	;!!Why not just offset_buffer? What's in the beginning?
 	mov word [offset_buffer+1024-4], bp
@@ -254,14 +254,14 @@ l8:	; Set CX:DX to 1024 * SI.
 	and cx, ((1 << 10) - 1)
 	and dx, ((1 << 6) - 1) << 10
 	int 21h				;Seek to 1024 * SI, to the beginning of the previous block.
-	jnc nc6
+	jnc strict short nc6
 	call error
 nc6:	mov dx, offset_buffer
 
 l20:	mov ah, 3Fh
 	mov cx, quote_limit-1		;Silently truncate longer quotes.
 	int 21h				;Olvasás
-	jnc nc7
+	jnc strict short nc7
 	call error			;Error reading quote.
 nc7:	add ax, dx
 	xchg ax, di			;DI := AX and clobber AX, but shorter.
@@ -275,11 +275,11 @@ nc7:	add ax, dx
 	mov di, offset_buffer+1020-1
 l21:	inc di
 	cmp [di], bp
-	jne l21
+	jne strict short l21
 	cmp [di+2], bp
-	jne l21
+	jne strict short l21
 	dec ax
-	jns l21
+	jns strict short l21
 	add di, byte 4			;DI:=offset(idézet)
 
 ;=======Kiírjuk a kiválasztott idézetet
@@ -291,12 +291,12 @@ lld:    mov cx, 79
 	mov al, 13			;CR
 	lea si, [di-1]
 	repnz scasb			;Seek CR
-	jz z5
+	jz strict short z5
 	call error			;Túl hosszú sor
 z5:	sub cx, byte 79
 	inc cx				;NOT nem állítja a flageket!!!
 	neg cx				;Most CX=sor hossza, CR nélkül
-	jnz y91
+	jnz strict short y91
 
 lle:	mov ax, 00EC0h			;Üres sor=> Idézet vége, kilépés
 	mov bx, 0D9h			;└┘
@@ -321,7 +321,7 @@ y91:    inc di
 	lodsb				;AL:=length(s), AL<>0.
 yd:     mov dl, 0			;AnsiCh=dl is 0 by default
 	cmp byte [si], '-'
-	jne yc
+	jne strict short yc
 	add qqqqw, byte 2		;Ha AnsiCh<>0 => s[1,2] kihagyása
 	dec ax
 	dec ax
@@ -331,13 +331,13 @@ yc:     mov ah, 0
 	mov bx, 78
 	mov cx, 15
 	cmp dl, 0
-	jne ya
+	jne strict short ya
 	mov al, 0
 	xor bx, bx
 	mov cx, 7
 	jmp strict near yb
 ya:     cmp dl, '&'
-	jne yb
+	jne strict short yb
 	mov bx, 39
 	shr ax, 1
 	mov cx, 10
