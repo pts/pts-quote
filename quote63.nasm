@@ -64,6 +64,7 @@
 ; * 0x100... (at most 3840 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
 ; * 0x1000...0x1800 (2048 bytes): Variable named buffer, file preread buffer.
+;   Continueas and overlaps idxc and index.
 ; * 0x1800...0x1802 (2 bytes): Variable named idxc, contains total number of quotes.
 ; * 0x1802...0xf402 (56320 bytes): Array variable named index, index
 ;   entries: each byte contains the total number of quotes whose first byte is in the
@@ -137,7 +138,7 @@ gen:	pop bx				;Get handle of quote.txt
 	mov si, offset_buffer
 	mov di, offset_index
 	mov bp, 0A0Dh
-	mov [si], bp			;Az első 4 byte nem lehet 13,10,13,10
+	mov [si], bp
 	mov [si+2], bp
 
 l2:	mov ah, 3Fh
@@ -153,9 +154,8 @@ l4:	cmp [si], bp
 	cmp [si+2], bp
 	jne strict short l3
 	cmp byte[si+4], 13
-	jne strict short ne3
-	call error
-ne3:	inc idxc			;Megszámolunk egy idézetet
+	je strict short l3		;Subsequent empty line is not a quote.
+	inc idxc			;Megszámolunk egy idézetet
 	inc ax				;Az 1K-kon belül is
 l3:	inc si
 	loop l4
@@ -272,9 +272,21 @@ l20:	mov ah, 3Fh
 nc7:	add ax, dx
 	xchg ax, di			;DI := AX and clobber AX, but shorter.
 	mov ax, bp
-	stosw				;Append sentinel CRLF+CRLF.
+	stosw				;Append sentinel CR,LF,CR,LF,14,CR,LF,CR,LF.
 	stosw
-	mov ah, 3Eh
+	; Now append 14,CR,LF,CR,LF quote_index times (at most 1275 bytes), as a
+	; final sentinel to stop processing even if the index file is buggy.
+	pop cx
+	push cx
+	jcxz lclose
+l9:	inc ax
+	stosb
+	dec ax
+	stosw
+	stosw
+	loop l9
+
+lclose:	mov ah, 3Eh
 	int 21h				;Close .txt file.
 
 	pop ax				;Now: AX: quote index within the block.
@@ -284,7 +296,9 @@ l21:	inc di
 	jne strict short l21
 	cmp [di+2], bp
 	jne strict short l21
-	dec ax
+	cmp byte [di+4], 13
+	je strict short l21		;Ignore CRLF+CRLF followed by CR.
+l22:	dec ax
 	jns strict short l21
 	add di, byte 4			;DI:=offset(idézet)
 
