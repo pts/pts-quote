@@ -13,10 +13,12 @@ this repository. Maintenance work (mostly software archeology, porting to
 the NASM 0.98.39 and Yasm 1.2.0 assemblers and bugfixes) resumed on
 2022-03-18. See the file changelog.txt for more details.
 
-To try the latest version from 1996:
+How to try and run the latest version:
 
 * Download the latest snapshot of the pts-quote repository.
-* Copy quote6.com.orig to quote.com .
+* Copy quote63.com.orig to quote.com .
+  To try the latest old version from 1996 instead, copy quote5.com.orig
+  instead to quote.com .
 * Copy quote_demo_dos.txt to quote.txt .
 * Install DOSBox.
 * Run `dosbox .' (without the quotes) in the repository directory.
@@ -25,6 +27,31 @@ To try the latest version from 1996:
   This should display a random quote with a colorful banner and a frame.
   Run it again to get a different random quote.
 
+How to compile and build:
+
+* Most users don't need to compile from source: there are many precompiled
+  .com.orig and .exe.orig files in the pts-quote repository. Just copy one
+  of the .com.orig files to quote.com or one of the .exe.orig files to
+  quotex.exe, and run quote.com or quotex.exe on DOS or in a DOS emulator.
+* Each .pas file is a Turbo Pascal 7.0 source file, and contains compile
+  instructions near the beginning (to create a DOS .exe program). To
+  compile, you need the Turbo Pascal 7.0 compiler (tpc.exe and its data
+  files), and you have to run it on DOS or in a DOS emulator (e.g. DOSBox).
+* Each .8 file is an assembly source file in the A86 dialect (works with A86
+  versions 3.22 .. 4.05), and contains compile instructions near the
+  beginning (to create a DOS .com program). To compile, you need the A86
+  assembler (latest version 4.05 available on http://eji.com/a86.zip ), and
+  you have to run it on DOS or in a DOS emulator (e.g. DOSBox).
+* Each .nasm file is an assembly source file in the NASM dialect (works with
+  NASM versions 0.98.39 .. 2.13.02 ... and Yasm versions 1.2.0 and 1.2.0,
+  and possibly other versions of NASM and Yasm), and contains compile
+  instructions near the beginning (to create a DOS .com program). To compile,
+  you need the NASM or Yasm assembler (both available for free as packages
+  for Linux and macOS, and executable programs available for Windows). You
+  can run these assemblers directly on modern (2022) hardware, without the
+  need for emulation. However, to run the compiled DOS .com program, you
+  need a DOS emulator (such as DOSBox, see instructions above) or a very
+  old system running DOS.
 File format of the text file quote.txt:
 
 * Each line must be terminated with a CRLF (\r\n, ASCII 10 + 13).
@@ -76,5 +103,4 @@ About the index file quote.idx:
 
 pts-quote is free software released under the GNU GPL v2 license. There is
 NO WARRANTY. Use at your own risk.
-
 __END__
