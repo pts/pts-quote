@@ -36,12 +36,6 @@ bits 16
 cpu 286
 org 0x100
 
-%macro my_jcxz_strict_short 1
-; `jcxz strict short %1' doesn't work: error: mismatch in operand sizes
-; `jcxz %1' works, but the shortness is not explicit.
-db 0xe3, (%1)-2-$
-%endmacro
-
 _start:  ; begin { Főprogram }
 mov al, 0xd  ; Writeln
 int 0x29
@@ -410,16 +404,16 @@ lodsb
 mov cl, al
 mov ch, 0x0
 mov dx, cx
-my_jcxz_strict_short lx_438
+jcxz lx_438
 mov cx, [qqq_before]
-my_jcxz_strict_short lx_41e
+jcxz lx_41e
 mov al, ' '
 lx_41a:
 int 0x29
 loop lx_41a
 lx_41e:
 mov cx, dx
-my_jcxz_strict_short lx_427
+jcxz lx_427
 lx_422:
 lodsb
 int 0x29
@@ -428,7 +422,7 @@ lx_427:
 mov cx, 0x4e
 sub cx, [qqq_before]
 sub cx, dx
-my_jcxz_strict_short lx_438
+jcxz lx_438
 mov al, ' '
 lx_434:
 int 0x29
@@ -522,7 +516,7 @@ mov cx, 0x19
 sub cx, ax
 mov bx, cx
 mov al, ' '
-my_jcxz_strict_short lx_96
+jcxz lx_96
 lx_92:
 int 0x29
 loop lx_92
@@ -537,7 +531,7 @@ mov cx, 0x32
 sub cx, bx
 sub cx, dx
 mov al, ' '
-my_jcxz_strict_short lx_b0
+jcxz lx_b0
 lx_ac:
 int 0x29
 loop lx_ac

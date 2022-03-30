@@ -67,12 +67,6 @@
 ;   `int 20h' instruction), so that a simple `ret' will exit the program.
 ;
 
-%macro my_jcxz_strict_short 1
-; `jcxz strict short %1' doesn't work: error: mismatch in operand sizes
-; `jcxz %1' works, but the shortness is not explicit.
-db 0xe3, (%1)-2-$
-%endmacro
-
 org 0x100
 bits 16
 cpu 8086
@@ -145,7 +139,7 @@ l2:	mov ah, 3Fh
 	mov dx, offset_buffer+4
 	int 21h
 	mov cx, ax
-	my_jcxz_strict_short l1
+	jcxz l1
 	mov al, 0
 
 l4:	cmp [si], bp
@@ -363,7 +357,7 @@ y6:     				;Display the string "s" with "before"
 	mov dx, cx
 	mov bh, 0
 	mov cx, qqqqbefore
-	my_jcxz_strict_short y5
+	jcxz y5
 	mov ax, 256*0Eh+' '
 y2:     int 10h
 	loop y2
@@ -375,7 +369,7 @@ y3:     lodsb
 y8:     mov cx, 78
 	sub cx, qqqqbefore
 	sub cx, dx
-	my_jcxz_strict_short y7
+	jcxz y7
 	mov ax, 0Eh*256+' '
 y4:     int 10h
 	loop y4
@@ -404,7 +398,7 @@ y71:    mov bx, 16
 	mov bx, cx
 	mov ax, 0Eh*256+' '
 	mov bh, 0
-	my_jcxz_strict_short y74
+	jcxz y74
 y75:    int 10h
 	loop y75
 y74:    mov cx, [si-1]
@@ -416,7 +410,7 @@ y76:    lodsb
 	sub cx, bx
 	sub cx, dx
 	mov al, ' '
-	my_jcxz_strict_short y78
+	jcxz y78
 y77:    int 10h
 	loop y77
 y78:    mov al, 0b0h			;'░'
