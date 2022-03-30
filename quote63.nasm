@@ -323,7 +323,6 @@ l5:	mov ah, 0
 	shl cx, 2
 	a86_add dx, cx
 	a86_add dh, bl
-	shl cx, 5
 	my_add_ax_immediate 1		;Modifies CF (inc ax doesn't).
 	a86_adc dx, bp			;BP:AX
 	a86_mov bx, dx
