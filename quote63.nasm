@@ -237,19 +237,22 @@ l7:	lodsb
 	sub dx, ax
 	jmp strict short l7
 
-l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).  !! Why +2?
+l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).
 	push dx				;Now: DX: quote index within the block.
 	mov bp, 0A0Dh
 	mov ax, 4200h
 	jns strict short l8
-	xor dx, dx
+	xor dx, dx			;Our quote is in block 0, seek to the beginning.
 	xor cx, cx
-	int 21h				;!!Why special-case seeking to the beginning?
+	int 21h
 	jnc strict short nc5
 	call error			;Error seeking to the beginning.
-nc5:	mov dx, offset_buffer+1024	;!!Why not just offset_buffer? What's in the beginning?
+nc5:	mov dx, offset_buffer+1024
 	mov word [offset_buffer+1024-4], bp
 	mov word [offset_buffer+1024-2], bp
+	; 1023 is the maximum size of the previous quote in the current (first)
+	; block and (quote_limit-1) is the maximum size of our quote.
+	mov cx, 1023+(quote_limit-1)
 	jmp strict near l20
 
 l8:	; Set CX:DX to 1024 * SI.
@@ -262,10 +265,13 @@ l8:	; Set CX:DX to 1024 * SI.
 	int 21h				;Seek to 1024 * SI, to the beginning of the previous block.
 	jnc strict short nc6
 	call error
-nc6:	mov dx, offset_buffer
+nc6:	mov dx, offset_buffer		;!! TODO: Just read 4 bytes of the previous block to offset_buffer+1020.
+	; 1024 is the size of the previous block, 1023 is the maximum size of the
+	; previous quote in the current block and (quote_limit-1) is the maximum size
+	; of our quote.
+	mov cx, 1024+1023+(quote_limit-1)
 
 l20:	mov ah, 3Fh
-	mov cx, quote_limit-1		;Silently truncate longer quotes.
 	int 21h				;Olvasás
 	jnc strict short nc7
 	call error			;Error reading quote.
@@ -300,7 +306,8 @@ l21:	inc di
 	je strict short l21		;Ignore CRLF+CRLF followed by CR.
 l22:	dec ax
 	jns strict short l21
-	add di, byte 4			;DI:=offset(idézet)
+	add di, byte 4			;DI:=offset(our_quote)
+	mov word [di+quote_limit-1], 0x0d0d  ;Forcibly truncate at 4095 bytes.
 
 ;=======Kiírjuk a kiválasztott idézetet
 	mov ax, 00EDAh			;Felső keret
@@ -310,7 +317,7 @@ l22:	dec ax
 lld:    mov cx, 79
 	mov al, 13			;CR
 	lea si, [di-1]
-	repnz scasb			;Seek CR
+	repnz scasb			;Seek CR using DI.
 	jz strict short z5
 	call error			;Túl hosszú sor
 z5:	sub cx, byte 79
@@ -327,8 +334,10 @@ lle:	mov ax, 00EC0h			;Üres sor=> Idézet vége, kilépés
 	call fillc
 	ret				;int 20h, Program vége
 
-y91:    inc di
-	mov [si], cl			;Beállítjuk a PasStr hosszát
+y91:	cmp [di-1], bp			;Compare against CRLF, we try to match LF.
+	jne strict short y92
+	inc di				;Skip over LF.
+y92:	mov [si], cl			;Beállítjuk a PasStr hosszát
 
 
 ;If S='' align returns TRUE else it returns FALSE. Align prints S with the
