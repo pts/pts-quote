@@ -241,37 +241,40 @@ l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).
 	push dx				;Now: DX: quote index within the block.
 	mov bp, 0A0Dh
 	mov ax, 4200h
+	mov di, offset_buffer
 	jns strict short l8
 	xor dx, dx			;Our quote is in block 0, seek to the beginning.
 	xor cx, cx
 	int 21h
 	jnc strict short nc5
 	call error			;Error seeking to the beginning.
-nc5:	mov dx, offset_buffer+1024
-	mov word [offset_buffer+1024-4], bp
-	mov word [offset_buffer+1024-2], bp
+nc5:	mov ax, bp
+	stosw				;Add sentinel CRLF+CRLF before the beginning.
+	stosw
 	; 1023 is the maximum size of the previous quote in the current (first)
 	; block and (quote_limit-1) is the maximum size of our quote.
 	mov cx, 1023+(quote_limit-1)
 	jmp strict near l20
 
-l8:	; Set CX:DX to 1024 * SI.
+l8:	; Set CX:DX to 1024 * SI + 1020.
 	mov dx, si
 	mov cl, 10
 	rol dx, cl
 	mov cx, dx
 	and cx, ((1 << 10) - 1)
 	and dx, ((1 << 6) - 1) << 10
-	int 21h				;Seek to 1024 * SI, to the beginning of the previous block.
+	add dx, 1020
+	adc cx, byte 0
+	int 21h				;Seek to 1024 * SI + 1020, to the beginning of the previous block.
 	jnc strict short nc6
 	call error
-nc6:	mov dx, offset_buffer		;!! TODO: Just read 4 bytes of the previous block to offset_buffer+1020.
-	; 1024 is the size of the previous block, 1023 is the maximum size of the
-	; previous quote in the current block and (quote_limit-1) is the maximum size
-	; of our quote.
-	mov cx, 1024+1023+(quote_limit-1)
+nc6:	; 4 is the size of the end of the  previous block, 1023 is the maximum size of
+	; the previous quote in the current block and (quote_limit-1) is the maximum
+	; size of our quote.
+	mov cx, 4+1023+(quote_limit-1)
 
-l20:	mov ah, 3Fh
+l20:	mov dx, di
+	mov ah, 3Fh
 	int 21h				;Olvasás
 	jnc strict short nc7
 	call error			;Error reading quote.
@@ -296,7 +299,7 @@ lclose:	mov ah, 3Eh
 	int 21h				;Close .txt file.
 
 	pop ax				;Now: AX: quote index within the block.
-	mov di, offset_buffer+1020-1
+	mov di, offset_buffer-1		;buffer starts with the last 4 bytes of the previous block.
 l21:	inc di
 	cmp [di], bp
 	jne strict short l21
