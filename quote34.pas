@@ -3,7 +3,7 @@
 quote34.pas: PotterSoftware Quote Displayer V2.34 (Turbo Pascal 7.0 inline assembly source code)
 (C) 1996--2022-03-27 by EplPáj of PotterSoftware, Hungary
 
-Compile it with Turbo Pascal 7.0, generate quote34.exe: tpc quote34.pas
+Compile it with Turbo Pascal 7.0 on DOS, generate quote34.exe: tpc quote34.pas
 
 Is this bug still present? !! This program prints garbage after the last
 quote (could not be reproduced).
