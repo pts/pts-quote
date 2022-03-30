@@ -4,7 +4,13 @@
 ; (C) 1996--2022-03-27 by EplPáj of PotterSoftware, Hungary
 ; translation to NASM on 2022-03-27
 ;
-; $ nasm.static -O0 -f bin -o quote42n.com quote42.nasm
+; Compile it with NASM 0.98.39 .. 2.13.02 ...:
+;
+;   $ nasm -O0 -f bin -o quote42n.com quote42.nasm
+;
+; Alternatively, compile it with Yasm 1.2.0 or 1.3.0:
+;
+;   $ yasm -O0 -f bin -o quote42n.com quote42.nasm
 ;
 ; Is this bug still present? !! This program prints garbage after the last
 ; quote (could not be reproduced), assuming CRLF + CRLF file ending.
@@ -325,6 +331,7 @@ lx_366:
 mov bx, 0x0  ; Look for #13 to determine length(s)
 mov si, var_s+1
 lx_36c:
+
 or bh, bh
 jnz strict short lx_378
 cmp byte [bx+si], 0xd
@@ -334,7 +341,8 @@ jmp strict short lx_36c
 lx_378:
 jmp strict near lx_46d  ; Hiba: 255 karakternél hosszabb sor
 lx_37b:
-mov [var_s], bl  ; Beállítjuk a string hosszát
+; Beállítjuk a string hosszát
+dw 0x1e88, var_s  ; mov byte [var_s], bl  ; Workaround to prevent bug in yasm-1.2.0 and yasm-1.3.0: INTERNAL ERROR at modules/arch/x86/x86expr.c, line 417: unexpected expr op
 inc bx
 inc bx
 add [qqq_l], bx  ; inc(l,length(s)+2);
