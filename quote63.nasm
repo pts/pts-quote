@@ -32,11 +32,11 @@
 ;touching the .idx file. Of course it's *very* slow unless you've a .txt file
 ;smaller than 64K.
 ;
-;I require an IBM compatible PC/AT computer, I can even work on a 286, but
-;unfurtunately the XT is not supported. I need exactly 64K free conventional
-;memory. No matter ANSI.SYS is loaded or not. I can only produce nice text-
-;mode graphics in 80-column modes. Oh, haven't I mentioned that I need only
-;DOS 2.0, but I prefer GNU-DOS.
+;I require an IBM compatible PC omputer, I can even work on an 8086 (no need
+;for 286, 386, 486, Pentium etc.). I need exactly 64K free conventional
+;memory. No matter ANSI.SYS is loaded or not. I can only produce nice
+;text-mode graphics in 80-column modes. I need DOS 2.0 or later; DOSBox and
+;FreeDOS also work.
 ;
 ;My error codes are not documentated, however, I give back the same errorlevel
 ;for the same error. Now the errors may be file i/o and line-too-long.
