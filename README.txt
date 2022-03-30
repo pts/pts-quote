@@ -103,4 +103,33 @@ About the index file quote.idx:
 
 pts-quote is free software released under the GNU GPL v2 license. There is
 NO WARRANTY. Use at your own risk.
+
+About the choice of programming language:
+
+* The goal was to create working, convenient and fast program ready for
+  everyday use, and also to impress the user with the tiny size of the
+  executable program.
+* The source code in 1996 was written in Turbo Pascal 7.0 (.pas files) and
+  A86 3.22 (.8 files), because the author was familiar with those at the
+  time. More specifically, the first version was written in Turbo Pascal 7.0
+  (source code lost by now), then it was ported to Turbo Pascal 7.0 inline
+  assembly (see quote3.pas in the pts-quote repository), then it was ported
+  to A86 assembly (see quote6.8) to make the executable program size smaller
+  by removing the .exe header and the Turbo Pascal 7.0 runtime library.
+* For the 2022 updates, some the A86 source code (.8 files) was ported to
+  NASM (.nasm files), because of the simplicity and versatilitiy of the NASM
+  assembly languange and the good native availability of free assemblers
+  (NASM and Yasm) on modern systems. The source code works with old and new
+  versions of NASM: the earliest supported one is NASM 0.98.39 (released on
+  2005-01-15).
+* NASM output (with `nasm -O0 -f bin') is compact and deterministic, and
+  with NASM it's possible (and easy most of the time) to generate
+  byte-by-byte identical executable program output, matching the output of
+  A86 and earlier NASM versions. This is great for reproducible builds.
+* Most other assemblers (such as MASM, TASM, LZASM, Wasm, JWasm, GNU AS)
+  except for FASM can't produce a DOS .com executable program directly (but
+  they produce an object file, from which the linker produces an
+  executable). This would introduce complexity and inconvenience to the
+  build and development process.
+
 __END__
