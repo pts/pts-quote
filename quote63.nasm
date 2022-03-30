@@ -73,12 +73,6 @@
 db 0xe3, (%1)-2-$
 %endmacro
 
-; Independent of `nasm -O0' vs `nasm -O9'.
-%macro my_add_ax_immediate 1
-db 5
-dw (%1)
-%endmacro
-
 org 0x100
 bits 16
 cpu 8086
@@ -224,7 +218,7 @@ l5:	mov ah, 0
 	shl cx, 1
 	add dx, cx
 	add dh, bl
-	my_add_ax_immediate 1		;Modifies CF (inc ax doesn't).
+	add ax, strict word 1		;Modifies CF (inc ax doesn't). `strict word' to make `nasm -O0' and `nasm -O9' the same.
 	adc dx, bp			;BP:AX
 	mov bx, dx
 	mul idxc
