@@ -69,7 +69,7 @@ History of code written in 1996 and updated in 2022:
        Ignores any number of empty lines between quotes.
        Work started on 2022-03-30. Also works on 8086 (not only 80286).
        quote63.nasm is NASM 0.98.39 source code.
-       quote63.com.orig is ~820 bytes.
+       quote63.com.orig is ~850 bytes.
 * 2.64 quotex.nasm is under development since 2022-03-18, it's not released.
        TODO: better random seed algorithm
        TODO: report error if empty or more than 65535 quotes
