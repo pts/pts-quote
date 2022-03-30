@@ -4,7 +4,9 @@
 ; (C) 22 September 1996 by EplPáj of PotterSoftware, Hungary
 ; translation to NASM on 2022-03-18
 ;
-; $ nasm -O0 -f bin -o quoten.com quote.nasm
+; Compile it with NASM 0.98.39 .. 2.13.02:
+;
+; $ nasm -O0 -f bin -o quote6n.com quote6.nasm
 ;
 ; Compiles with NASM 0.98.39 or later. Produces identical output with
 ; NASM 2.13.02 (with both -O0 and -O9).

@@ -8,15 +8,15 @@ in DOSBox and QEMU on modern systems).
 
 The inital assembly language implementation for DOS on the Intel 286
 architecture was written in 1996 for Turbo Pascal 7.0 inline assembly and
-the A86 3.22 assembler, with the last version being quote.com.orig in this
-repository. Maintenance work (mostly software archeology, porting to the
-NASM 0.98.39 assembler and bugfixes) resumed on 2022-03-18. See the file
+the A86 3.22 assembler, with the last 1996 version being quote6.com.orig in
+this repository. Maintenance work (mostly software archeology, porting to
+the NASM 0.98.39 assembler and bugfixes) resumed on 2022-03-18. See the file
 changelog.txt for more details.
 
 To try the latest version from 1996:
 
 * Download the latest snapshot of the pts-quote repository.
-* Copy quote.com.orig to quote.com .
+* Copy quote6.com.orig to quote.com .
 * Copy quote_demo_dos.txt to quote.txt .
 * Install DOSBox.
 * Run `dosbox .' (without the quotes) in the repository directory.
