@@ -183,7 +183,7 @@ dw (%1)
 
 org 0x100
 bits 16
-cpu 286  ; Some instructions below (such as higher-than-1 bit shifts) need 286.
+cpu 8086
 
 ;=======Konstansok
 	buflen equ 2048
@@ -316,11 +316,14 @@ l5:	mov ah, 0
 	a86_mov bx, ax
 	mov dx, 8405h
 	mul dx
-	shl bx, 3
+	shl bx, 1
+	shl bx, 1
+	shl bx, 1
 	a86_add ch, cl
 	a86_add dx, bx
 	a86_add dx, cx
-	shl cx, 2
+	shl cx, 1
+	shl cx, 1
 	a86_add dx, cx
 	a86_add dh, bl
 	my_add_ax_immediate 1		;Modifies CF (inc ax doesn't).
@@ -357,10 +360,13 @@ nc5:	mov dx, offset_buffer+1024	;!!Why not just offset_buffer? What's in the beg
 	mov word [offset_buffer+1024-2], bp
 	jmp strict near l20
 
-l8:	a86_mov dx, si
-	shl dx, 10
-	a86_mov cx, si
-	shr cx, 6
+l8:	; Set CX:DX to 1024 * SI.
+	a86_mov dx, si
+	mov cl, 10
+	rol dx, cl
+	a86_mov cx, dx
+	and cx, ((1 << 10) - 1)
+	and dx, ((1 << 6) - 1) << 10
 	int 21h				;Seek to 1024 * SI, to the beginning of the previous block.
 	jnc nc6
 	call error
