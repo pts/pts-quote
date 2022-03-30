@@ -3,7 +3,7 @@
 quote3.pas: PotterSoftware Quote Displayer V2.33 (Turbo Pascal 7.0 inline assembly source code)
 (C) 1996 by EplPáj of PotterSoftware, Hungary
 
-Compile it with Turbo Pascal 7.0, generate quote3.exe: tpc quote3.pas
+Compile it with Turbo Pascal 7.0 on DOS, generate quote3.exe: tpc quote3.pas
 
 This program (quote3.exe) is buggy in both DOSBox
 and QEMU, it usually hangs after printing the header correctly.
