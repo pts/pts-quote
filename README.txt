@@ -29,7 +29,10 @@ File format of the text file quote.txt:
 
 * Each line must be terminated with a CRLF (\r\n, ASCII 10 + 13).
 * Quotes are separated by an empty line (i.e. CRLF + CRLF).
-* There must be an empty line (i.e. CRLF + CRLF at the end of the file.
+* There must be an empty line (i.e. CRLF + CRLF) at the end of the file.
+  If that's missing, then versions before 2.60 ignore such a last quote,
+  versions 2.60 .. 2.62 will exit early without finishing, and versions
+  2.63 .. 2.69 print such a last quote properly.
 * Quotes must not be empty (i.e. CRLF + CRLF must not be followed by CRLF).
 * Each quote must fit to 4095 bytes (including the trailing CRLF + CRLF).
 * If a line starts with --, it will be right-aligned without the -- ,

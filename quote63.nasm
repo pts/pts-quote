@@ -192,7 +192,7 @@ cpu 286  ; Some instructions below (such as higher-than-1 bit shifts) need 286.
 
 ;=======Kezdőérték nélküli adatok
 %define	buffer word[1000h]		;Fájl-előreolvasó buffer
-%define offset_buffer 1000h
+%define offset_buffer 1000h		;buffer overlaps idxc and index when reading the final quote.
 %define	idxc   word[1000h+buflen]	;Total number of quotes. IDXC és INDEX egymás után van!!!
 %define offset_idxc (1000h+buflen)
 %define	index  word[1000h+buflen+2]	;Indextábla 1 az 1-ben
@@ -369,13 +369,16 @@ nc6:	mov dx, offset_buffer
 
 l20:	mov ah, 3Fh
 	mov cx, quote_limit-1		;Silently truncate longer quotes.
-	mov [offset_buffer+quote_limit-1], bp	;Biztos, ami biztos, idézet vége
-	mov [offset_buffer+quote_limit], bp	;jelet teszünk a buffer végére.  !! Put it after-read-size.
 	int 21h				;Olvasás
 	jnc nc7
 	call error			;Error reading quote.
-ne7:	mov ah, 3Eh
-	int 21h				;Close .txt
+nc7:	add ax, dx
+	xchg ax, di			;DI := AX and clobber AX, but shorter.
+	mov ax, bp
+	stosw				;Append sentinel CRLF+CRLF.
+	stosw
+	mov ah, 3Eh
+	int 21h				;Close .txt file.
 
 	pop ax				;Now: AX: quote index within the block.
 	mov di, offset_buffer+1020-1
