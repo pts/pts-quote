@@ -65,6 +65,8 @@ History of code written in 1996 and updated in 2022:
        quote6.nasm is NASM 0.98.39 source code.
        quote6.com.orig is 794 bytes. It was distributed as quote.com in 1996.
 * 2.63 From 2.62 some bugfixes and compatibility improvements with previous versions.
+       Can print the last quote even if file not terminated by CRLF+CRLF.
+       Ignores any number of empty lines between quotes.
        Work started on 2022-03-30. Also works on 8086 (not only 80286).
        quote63.nasm is NASM 0.98.39 source code.
        quote63.com.orig is ~820 bytes.

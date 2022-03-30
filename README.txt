@@ -52,15 +52,13 @@ How to compile and build:
   need for emulation. However, to run the compiled DOS .com program, you
   need a DOS emulator (such as DOSBox, see instructions above) or a very
   old system running DOS.
-File format of the text file quote.txt:
 
-* Each line must be terminated with a CRLF (\r\n, ASCII 10 + 13).
-* Quotes are separated by an empty line (i.e. CRLF + CRLF).
-* There must be an empty line (i.e. CRLF + CRLF) at the end of the file.
-  If that's missing, then versions before 2.60 ignore such a last quote,
-  versions 2.60 .. 2.62 will exit early without finishing, and versions
-  2.63 .. 2.69 print such a last quote properly.
-* Quotes must not be empty (i.e. CRLF + CRLF must not be followed by CRLF).
+File format of the text file quote.txt as of version 2.63:
+
+* Each line except possibly the last one must be terminated with a CRLF
+  (\r\n, ASCII 10 + 13).
+* Quotes are separated by one or more empty lines (i.e. CRLF + CRLF,
+  CRLF + CRLF + CRLF or longer). It's OK to omit this at the end of file.
 * Each quote must fit to 4095 bytes (including the trailing CRLF + CRLF).
 * If a line starts with --, it will be right-aligned without the -- ,
   and it will be highlighted.
@@ -69,8 +67,23 @@ File format of the text file quote.txt:
 * Otherwise lines must not start with - .
 * The file quote.txt must be at most 55 MiB in size.
 * The file quote.txt must contain at least 1 and at most 65535 quotes.
+  (Later updates will increase this to 11 534 336 quotes: 5 bytes each for
+  55 MiB.)
 * There is no validator. The program will misbehave for nonconforming
   quote.txt files.
+
+Further restriction on quote.txt imposed by some earlier versions:
+
+* Each line including the last one must be terminated with a CRLF (\r\n,
+  ASCII 10 + 13).
+* Quotes are separated by an empty line (i.e. CRLF + CRLF), and the last
+  line must also be empty.
+* If the last empty line (i.e. CRLF + CRLF) is missing, then then versions
+  before 2.60 will ignore such a last quote, versions 2.60 .. 2.62 will exit
+  early without finishing.
+* Quotes must not be empty (i.e. CRLF + CRLF must not be followed by CRLF).
+* Each quote must fit to 4095 bytes (including the trailing CRLF + CRLF).
+* The file quote.txt must contain at least 1 and at most 24160 quotes.
 
 About the index file quote.idx:
 
