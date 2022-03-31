@@ -56,6 +56,8 @@ History of code written in 1996 and updated in 2022:
 * 2.60 QUOTE.IDX index file format redesigned, file is much smaller:
        just 8% of before, just 0.976% of QUOTE.TXT.
        Source code and .com program binary have been lost.
+       In the header message, it is branded ``PotterSoftware Fortune Teller'',
+       rather than ``PotterSoftware Quote Displayer''.
 * 2.61 Fully working, smaller.
        Source code and .com program binary of 784 bytes have been lost.
 * 2.62 Even smaller. Parameter- and full error handling included. Bugs fixed.
