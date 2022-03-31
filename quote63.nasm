@@ -484,7 +484,9 @@ ploop2:	dec ax
 	ret
 
 ;=======Kezdőértékes adatok
-txtfn	db 'QUOTE.TXT',0
-idxfn	db 'QUOTE.IDX',0
-headermsg	db 34,'PotterSoftware Fortune Teller 2.6'  ; Size 34 should be 33.
-footermsg	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
+txtfn:	db 'QUOTE.TXT',0
+idxfn:	db 'QUOTE.IDX',0
+headermsg:	db headermsg_size, 'PotterSoftware Fortune Teller 2.6'
+headermsg_size	equ $-headermsg-1
+footermsg:	db footermsg_size, 'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
+footermsg_size	equ $-footermsg-1
