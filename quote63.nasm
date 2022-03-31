@@ -486,7 +486,7 @@ ploop2:	dec ax
 ;=======Kezdőértékes adatok
 txtfn:	db 'QUOTE.TXT',0
 idxfn:	db 'QUOTE.IDX',0
-headermsg:	db headermsg_size, 'PotterSoftware Fortune Teller 2.6'
+headermsg:	db headermsg_size, 'PotterSoftware Fortune Teller 2.63'
 headermsg_size	equ $-headermsg-1
 footermsg:	db footermsg_size, 'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
 footermsg_size	equ $-footermsg-1
