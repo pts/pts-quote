@@ -71,6 +71,7 @@
 ; * 0x100... (at most 3840 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
 ; * 0x1000...0x1800 (2048 bytes): Variable named buffer, file preread buffer.
+;   Continues and overlaps idxc and index.
 ; * 0x1800...0x1802 (2 bytes): Variable named idxc, contains total number of quotes.
 ; * 0x1802...0xf402 (56320 bytes): Array variable named index, index
 ;   entries: each byte contains the total number of quotes whose first byte is in the
@@ -304,10 +305,10 @@ nc2:	a86_mov bx, ax
 	pop bx				;Most: BX=handle of quote.txt
 l19:	cmp param, 2
 	jne strict short ne4
-	ret				;int 20h
+	ret				;Exit with int 20h.
 ne4:
 
-;=======Megkeressük a random idézetet
+;=======Generates 32-bit random number in DX:AX. Clobbers flags, BP, BX, CX.
 l5:	mov ah, 0
 	int 1Ah				;Get time-random seed in CX:DX
 	push bx
@@ -326,16 +327,21 @@ l5:	mov ah, 0
 	a86_add dh, bl
 	shl cx, 5
 	add ax, strict word 1		;Modifies CF (inc ax doesn't). `strict word' to make `nasm -O0' and `nasm -O9' the same.
-	a86_adc dx, bp			;BP:AX
+	a86_adc dx, bp			;(DX:AX) += (0, 1). BP is 0.
+	; Now DX:AX is a 32-bit random number.
+
+;=======Generates random DX:=random(idxc) from random DX:AX.
+;       Assumes BP==0. Clobbers flags, AX, BX.
 	a86_mov bx, dx
 	mul idxc
 	a86_mov ax, bx
 	a86_mov bx, dx
 	mul idxc
 	a86_add ax, bx
-	a86_adc dx, bp			;DX:=random(nr_of_quotes)
-	pop bx
+	a86_adc dx, bp			;DX:=random(idxc). BP is 0.
 
+;=======Finds block index (as SI-offset_index) of the quote with index DX.
+	pop bx
 	mov si, offset_index
 	mov ah, 0
 l7:	lodsb
@@ -344,6 +350,7 @@ l7:	lodsb
 	a86_sub dx, ax
 	jmp strict short l7
 
+;=======Seeks to the block of our quote with index DX.
 l6:	sub si, offset_index+2		;Most: SI=hányadik 1024 byte-os szelet
 	push dx				;Most: AX=a szelet ?-ik idézete
 	mov bp, 0A0Dh
@@ -356,7 +363,6 @@ l6:	sub si, offset_index+2		;Most: SI=hányadik 1024 byte-os szelet
 	mov word [offset_buffer+1024-4], bp
 	mov word [offset_buffer+1024-2], bp
 	jmp strict near l20
-
 l8:	a86_mov dx, si
 	shl dx, 10
 	a86_mov cx, si
@@ -364,6 +370,7 @@ l8:	a86_mov dx, si
 	int 21h
 	mov dx, offset_buffer
 
+;=======Reads the blocks containing our quote.
 l20:	mov ah, 3Fh
 	mov cx, quote_max		;Ennyi tuti, hogy elég lesz.
 	mov [offset_buffer+quote_max], bp	;Biztos, ami biztos, idézet vége

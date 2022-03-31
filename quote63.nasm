@@ -64,7 +64,7 @@
 ; * 0x100... (at most 3840 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
 ; * 0x1000...0x1800 (2048 bytes): Variable named buffer, file preread buffer.
-;   Continueas and overlaps idxc and index.
+;   Continues and overlaps idxc and index.
 ; * 0x1800...0x1802 (2 bytes): Variable named idxc, contains total number of quotes.
 ; * 0x1802...0xf402 (56320 bytes): Array variable named index, index
 ;   entries: each byte contains the total number of quotes whose first byte is in the
@@ -195,13 +195,13 @@ nc2:	mov bx, ax
 	pop bx				;Most: BX=handle of quote.txt
 l19:	cmp param, 2
 	jne strict short ne4
-	ret				;int 20h
+	ret				;Exit with int 20h.
 ne4:
+l5:	push bx
 
-;=======Megkeressük a random idézetet
-l5:	mov ah, 0
+;=======Generates 32-bit random number in DX:AX. Clobbers flags, BP, BX, CX.
+	mov ah, 0
 	int 1Ah				;Get time-random seed in CX:DX
-	push bx
 	xor bp, bp
 	mov ax, cs
 	add ax, dx			;Modify seed
@@ -219,16 +219,21 @@ l5:	mov ah, 0
 	add dx, cx
 	add dh, bl
 	add ax, strict word 1		;Modifies CF (inc ax doesn't). `strict word' to make `nasm -O0' and `nasm -O9' the same.
-	adc dx, bp			;BP:AX
+	adc dx, bp			;(DX:AX) += (0, 1). BP is 0.
+	; Now DX:AX is a 32-bit random number.
+
+;=======Generates random DX:=random(idxc) from random DX:AX.
+;       Assumes BP==0. Clobbers flags, AX, BX.
 	mov bx, dx
 	mul idxc
 	mov ax, bx
 	mov bx, dx
 	mul idxc
 	add ax, bx
-	adc dx, bp			;DX:=random(nr_of_quotes)
-	pop bx
+	adc dx, bp			;DX:=random(idxc). BP is 0.
 
+;=======Finds block index (as SI-offset_index) of the quote with index DX.
+	pop bx
 	mov si, offset_index
 	mov ah, 0
 l7:	lodsb
@@ -237,6 +242,7 @@ l7:	lodsb
 	sub dx, ax
 	jmp strict short l7
 
+;=======Seeks to the block of our quote with index DX.
 l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).
 	push dx				;Now: DX: quote index within the block.
 	mov bp, 0A0Dh
@@ -255,7 +261,6 @@ nc5:	mov ax, bp
 	; block and (quote_limit-1) is the maximum size of our quote.
 	mov cx, 1023+(quote_limit-1)
 	jmp strict near l20
-
 l8:	; Set CX:DX to 1024 * SI + 1020.
 	mov dx, si
 	mov cl, 10
@@ -273,6 +278,7 @@ nc6:	; 4 is the size of the end of the  previous block, 1023 is the maximum size
 	; size of our quote.
 	mov cx, 4+1023+(quote_limit-1)
 
+;=======Reads the blocks containing our quote.
 l20:	mov dx, di
 	mov ah, 3Fh
 	int 21h				;Olvasás
