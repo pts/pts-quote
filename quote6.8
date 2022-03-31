@@ -61,6 +61,7 @@
 ; * 0x100... (at most 3840 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
 ; * 0x1000...0x1800 (2048 bytes): Variable named buffer, file preread buffer.
+;   Continues and overlaps idxc and index.
 ; * 0x1800...0x1802 (2 bytes): Variable named idxc, contains total number of quotes.
 ; * 0x1802...0xf402 (56320 bytes): Array variable named index, index
 ;   entries: each byte contains the total number of quotes whose first byte is in the
@@ -182,9 +183,9 @@ l1:	cmp param, 5
 	int 21h				;Close .idx
 	pop bx				;Most: BX=handle of quote.txt
 l19:	cmp param, 2
-	if e ret			;int 20h
+	if e ret			;Exit with int 20h.
 
-;=======Megkeressük a random idézetet
+;=======Generates 32-bit random number in DX:AX. Clobbers flags, BP, BX, CX.
 l5:	mov ah, 0
 	int 1Ah				;Get time-random seed in CX:DX
 	push bx
@@ -203,16 +204,21 @@ l5:	mov ah, 0
 	add dh, bl
 	shl cx, 5
 	add ax, 1
-	adc dx, bp			;BP:AX
+	adc dx, bp			;(DX:AX) += (0, 1). BP is 0.
+	; Now DX:AX is a 32-bit random number.
+
+;=======Generates random DX:=random(idxc) from random DX:AX.
+;       Assumes BP==0. Clobbers flags, AX, BX.
 	mov bx, dx
 	mul idxc
 	mov ax, bx
 	mov bx, dx
 	mul idxc
 	add ax, bx
-	adc dx, bp			;BP:DX:=random(nr_of_quotes)
-	pop bx
+	adc dx, bp			;DX:=random(idxc). BP is 0.
 
+;=======Finds block index (as SI-offset index) of the quote with index DX.
+	pop bx
 	mov si, offset index
 	mov ah, 0
 l7:	lodsb
@@ -221,6 +227,7 @@ l7:	lodsb
 	sub dx, ax
 	jmp l7
 
+;=======Seeks to the block of our quote with index DX.
 l6:	sub si, offset index+2		;Most: SI=hányadik 1024 byte-os szelet
 	push dx				;Most: AX=a szelet ?-ik idézete
 	mov bp, 0A0Dh
@@ -233,7 +240,6 @@ l6:	sub si, offset index+2		;Most: SI=hányadik 1024 byte-os szelet
 	mov w buffer[1024-4], bp
 	mov w buffer[1024-2], bp
 	jmp l20
-
 l8:	mov dx, si
 	shl dx, 10
 	mov cx, si
@@ -241,6 +247,7 @@ l8:	mov dx, si
 	int 21h
 	mov dx, offset buffer
 
+;=======Reads the blocks containing our quote.
 l20:	mov ah, 3Fh
 	mov cx, quote_max		;Ennyi tuti, hogy elég lesz.
 	mov buffer[quote_max], bp	;Biztos, ami biztos, idézet vége
