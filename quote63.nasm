@@ -96,6 +96,10 @@ cpu 8086
 
 ;=======Kód
 _start:
+	; Vanity header. It is mostly a no-op at the beginning of a DOS .com file.
+	; The version number digits after 2. can be arbitrary.
+	db 'POTTERSOFTWARE_QUOTE_DISPLAYER_2.63', 13, 10, 26, 0x83, 0xc4, 0x14
+	;db 'POTTERSOFTWARE_FORTUNE_TELLER_2.63', 13, 10, 26, 0x83, 0xc4, 0x16
 	xor bx, bx
 	mov idxc, bx
 

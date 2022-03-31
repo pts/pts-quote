@@ -1,10 +1,10 @@
 pts-quote: display a random quote on the console
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-pts-quote is a collection of command-line tools for choosing and displaying
-a text quote (tagline, quote-of-the-day, QotD) randomly from a text file and
-displaying it on the console. Currently it is implemented in assembly
-language for DOS on the Intel 8086 and 286 architectures (and it can be run
-in DOSBox and QEMU on modern systems).
+pts-quote (PotterSoftware Quote Displayer) is a collection of command-line
+tools for choosing and displaying a text quote (tagline, quote-of-the-day,
+QotD) randomly from a text file and displaying it on the console. Currently
+it is implemented in assembly language for DOS on the Intel 8086 and 286
+architectures (and it can be run in DOSBox and QEMU on modern systems).
 
 The inital assembly language implementation for DOS on the Intel 286
 architecture was written in 1996 for Turbo Pascal 7.0 inline assembly and
