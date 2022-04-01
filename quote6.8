@@ -71,20 +71,21 @@
 ;   the program.
 ;
 
-;=======Konstansok
+;=======Size-measuring constants.
+	_bss= 1000h
 	buflen= 2048
 	idxlen= 55*1024
 	quote_max= 4096
 
-;=======Kezdőérték nélküli adatok
-	buffer= [1000h]w		;Fájl-előreolvasó buffer
-	idxc=   [1000h+buflen]w		;IDXC és INDEX egymás után van!!!
-	index=  [1000h+buflen+2]w	;Indextábla 1 az 1-ben
+;=======Uninitialized data (_bss).
+	buffer= [_bss]w			;quote.txt file preread buffer. It overlaps idxc and index when reading our quote.
+	idxc=   [_bss+buflen]w		;Total number of quotes.
+	index=  [_bss+buflen+2]w	;Index table: 1 byte for each 1024-byte block of quote.txt.
 	qqqqw=  [0F0h]w
 	param=  [080h]b
 	qqqqbefore= [0F2h]w
 
-;=======Kód
+;=======Code (_code).
 _start:
 	xor bx, bx
 	mov idxc, bx
