@@ -1,0 +1,167 @@
+;=======Generates random CX:DX:=random(O:IDXC) from random SI:DI.
+;       It does the multiplication (O:IDXC) * (SI:DI), and keeps the highest
+;       32 bits of the 64-bit result.
+;       Clobbers flags, AX, BX, SI, DI.
+
+; The rest of this file shows how the code evolves from a C expression to
+; 16-bit 8086 assembly code.
+
+	;(O << 16 | IDXC) * (SI << 16 | DI) ==
+	;	((O * SI) << 32) + ((O * DI + SI * IDXC) << 16) + (IDXC * DI)
+	return (O * SI) + (((O * DI + SI * IDXC) << 16) + (IDXC * DI)) >> 32
+
+	T1:T2:T3:T4 = 0:0:((IDXC*DI))
+	T5:T6:T7:T8 = 0:((O*DI+IDXC*SI)):0
+	TA:TB:TC:TD = ((O*SI)):0:0
+	TE:TF:TG:TH = T1:T2:T3:T4 + T5:T6:T7:T8
+	TI:TJ:TK:TL = TE:TF:TG:TH + TA:TB:TC:TD
+	return TI:TJ
+
+	T3:T4 = ((IDXC*DI))
+	T6:T7 = ((O*DI+IDXC*SI))  ; This may overflow.
+	TA:TB = ((O*SI))
+	TE:TF:TG:TH = 0:0:T3:T4 + 0:T6:T7:0
+	TI:TJ:TK:TL = TE:TF:TG:TH + TA:TB:0:0
+	return TI:TJ
+
+	T3:T4 = ((IDXC*DI))
+	T6:T7 = ((O*DI+IDXC*SI))
+	TA:TB = ((O*SI))
+	TF:TG = 0:T3 + T6:T7
+	TH = T4
+	TI:TJ = 0:TF + TA:TB
+	TK:TL = TG:TH
+	return TI:TJ
+
+	T3:T4 = ((IDXC*DI))
+	T6:T7 = ((O*DI+IDXC*SI))  ; This may overflow.
+	TA:TB = ((O*SI))
+	T6:T7 += 0:T3  ; T7 will be ignored.
+	TI:TJ = 0:T6 + TA:TB
+	return TI:TJ
+
+	T3:T4 = ((IDXC*DI))
+	T6:T7 = ((O*DI))  ; Since O<0x100, T6<0x100.
+	T8:T9 = ((IDXC*SI))
+	T6':T7 += T8:T9  ; This may overflow T6.
+	T6':T7 += 0:T3
+	DX:AX = ((O*SI))
+	add AX, T6
+	adc DX, byte 0
+	return DX:AX
+
+	T6:T7 = ((O*DI))  ; Since O<0x100, T6<0x100.
+	T3:T4 = ((IDXC*DI))  ; Result T4 will be ignored.
+	add T7, T3
+	adc T6, 0  ; No overflow here since T6<0x100.
+	T8:T9 = ((IDXC*SI))
+	add T7, T9  ; Result T7 will be ignored.
+	adc T6, T8  ; Overflow goes to CF.
+	pushf
+	DX:AX = ((O*SI))
+	popf
+	adc AX, T6
+	adc DX, byte 0
+	return DX:AX
+
+	DX:AX = ((O*DI))  ; Since O<0x100, T6<0x100.
+	T6:T7 = DX:AX
+	DX:AX = ((IDXC*DI))  ; Result AX will be ignored.
+	add T7, DX
+	adc T6, 0  ; No overflow here since T6<0x100.
+	DX:AX = ((IDXC*SI))
+	add AX, T7  ; Result AX and T7 will be ignored.
+	adc T6, DX  ; Overflow goes to CF.
+	pushf
+	DX:AX = ((O*SI))
+	popf
+	xchg AX, DX
+	adc DX, T6
+	adc AX, byte 0
+	mov CX, AX
+	return CX:DX
+
+	mov AX, DI
+	mul word O  ; DX:AX = ((O*DI))  ; Since O<0x100, CX=DX<0x100.
+	mov CX, DX
+	mov BX, AX
+	mov AX, DI
+	mul word IDXC  ; DX:AX = ((IDXC*DI))  ; Result AX will be ignored.
+	add BX, DX
+	adc CX, byte 0  ; No overflow here since CX<0x100.
+	mov AX, SI
+	mul word IDXC  ; DX:AX = ((IDXC*SI))
+	add AX, BX  ; Result AX and BX will be ignored.
+	adc CX, DX  ; Overflow goes to CF.
+	pushf
+	mov AX, SI
+	mul word O  ; DX:AX = ((O*SI))
+	popf
+	xchg AX, DX
+	adc DX, CX
+	adc AX, byte 0
+	mov CX, AX
+	return CX:DX
+
+; Final version:
+
+	mov AX, DI
+	mul word O  ; DX:AX = ((O*DI))  ; Since O<0x100, CX=DX<0x100.
+	mov CX, DX
+	xchg BX, AX  ; Clobbers AX. We don't care.
+	xchg AX, DI  ; Clobbers DI. We don't care.
+	mul word IDXC  ; DX:AX = ((IDXC*DI))  ; Result AX will be ignored.
+	add BX, DX
+	adc CX, byte 0  ; No overflow here since CX<0x100.
+	mov AX, SI
+	mul word IDXC  ; DX:AX = ((IDXC*SI))
+	add AX, BX  ; Result AX and BX will be ignored.
+	adc CX, DX  ; Overflow goes to CF.
+	pushf
+	xchg AX, SI  ; Clobbers SI, we don't care.
+	mul word O  ; DX:AX = ((O*SI))
+	popf
+	xchg AX, DX
+	adc DX, CX
+	adc AX, byte 0
+	xchg CX, AX  ; Clobbers AX. We don't care.
+	return CX:DX
+
+; If O==0, then this simplifies to:
+
+	mov AX, DI
+	mul word IDXC  ; DX:AX = ((IDXC*DI))  ; Result AX will be ignored.
+	mov BX, DX
+	mov AX, SI
+	mul word IDXC  ; DX:AX = ((IDXC*SI))
+	add AX, BX  ; Result AX and BX will be ignored.
+	adc DX, 0
+	return DX
+
+	mov BX, SI
+	xchg AX, DI  ; Clobbers DI, we don't care.
+	mul word IDXC  ; DX:AX = ((IDXC*DI))  ; Result AX will be ignored.
+	mov AX, BX
+	mov BX, DX
+	mul word IDXC  ; DX:AX = ((IDXC*SI))
+	add AX, BX  ; Result AX and BX will be ignored.
+	adc DX, 0
+	return DX
+
+	xchg AX, DI  ; Clobbers DI, we don't care.
+	mul word IDXC  ; DX:AX = ((IDXC*DI))  ; Result AX will be ignored.
+	mov BX, DX
+	mov AX, SI
+	mul word IDXC  ; DX:AX = ((IDXC*SI))
+	add AX, BX  ; Result AX and BX will be ignored.
+	adc DX, 0
+	return DX
+
+	xchg AX, DI			;Clobbers DI, we don't care.
+	mul IDXC
+	xchg AX, SI			;Clobbers SI, we don't care.
+	mov SI, dx
+	mul IDXC
+	add AX, SI
+	adc dx, byte 0			;DX:=random(0:IDXC).
+	return DX
