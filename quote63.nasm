@@ -202,38 +202,38 @@ l19:	cmp param, 2
 ne4:
 l5:	push bx
 
-;=======Generates 32-bit random number in DX:AX. Clobbers flags, BP, BX, CX.
-	mov ah, 0
-	int 1Ah				;Get time-random seed in CX:DX
-	xor bp, bp
-	mov ax, cs
-	add ax, dx			;Modify seed
-	mov bx, ax
-	mov dx, 8405h
-	mul dx
-	shl bx, 1
-	shl bx, 1
-	shl bx, 1
-	add ch, cl
-	add dx, bx
-	add dx, cx
-	shl cx, 1
-	shl cx, 1
-	add dx, cx
-	add dh, bl
-	add ax, strict word 1		;Modifies CF (inc ax doesn't). `strict word' to make `nasm -O0' and `nasm -O9' the same.
-	adc dx, bp			;(DX:AX) += (0, 1). BP is 0.
-	; Now DX:AX is a 32-bit random number.
+;=======Generates 32-bit random number in SI:DI. Clobbers flags, AX, BX, CX.
+	mov ah, 0			;Read system clock counter to CX:DX.
+	int 0x1a
+	mov si, cx
+	mov di, dx
+	call mixes3_si_di
+	mov ah, 2			;Read clock time to CX, DX.
+	int 0x1a
+	add si, cx
+	adc di, dx
+	call mixes3_si_di
+	mov ah, 4			;Read clock date to CX, DX.
+	int 0x1a
+	add si, cx
+	adc di, dx
+	call mixes3_si_di
+	mov cx, ds
+	add si, cx
+	adc di, dx
+	call mixes3_si_di
+	; Now SI:DI is a 32-bit random number.
 
-;=======Generates random DX:=random(idxc) from random DX:AX.
-;       Assumes BP==0. Clobbers flags, AX, BX.
-	mov bx, dx
+;=======Generates random DX:=random(idxc) from random SI:DI.
+;       Clobbers flags, AX, BX.
+	mov bx, si
+	xchg ax, di
 	mul idxc
 	mov ax, bx
 	mov bx, dx
 	mul idxc
 	add ax, bx
-	adc dx, bp			;DX:=random(idxc). BP is 0.
+	adc dx, byte 0			;DX:=random(idxc).
 
 ;=======Finds block index (as SI-offset_index) of the quote with index DX.
 	pop bx
@@ -421,6 +421,62 @@ y7:     mov ax, 0Eh*256+0b3h		;'│' The line ends by this, too.
 ;(3)
 ;Itt kerülnek leírásra a meghívott függvények.
 ;
+
+; Does 10 mix3 iterations on SI:DI (used for both input and output).
+; mix3 is a period 2**32-1 PNRG ([13,17,5]), to fill the seeds.
+; Clobbers flags and AX.
+;
+; https://stackoverflow.com/a/54708697
+; https://stackoverflow.com/a/70960914
+;
+; The iteration count of 10 was chosen empirically by looking at key
+; values 0..19 and the upper 2 and 3 bits of mixes3(key). Even 6 and 7 are
+; bad, 9 is much better, 10 is good enough.
+;
+; Equivalent to the following C code (with key == SI:DI).
+;
+;   uint32_t mix3(uint32_t key) {
+;     key ^= (key << 13);
+;     key ^= (key >> 17);
+;     key ^= (key << 5);
+;     return key;
+;   }
+;
+;   uint32_t mixes3(uint32_t key) {
+;     int itc;
+;     for (itc = 10; itc > 0; --itc, key = mix3(key)) {}
+;     return key;
+;   }
+mixes3_si_di:
+	push bx
+	push bp
+	mov ah, 10			;Do 10 iterations of mix3.
+ml0:	mov bx, di
+	mov bp, si
+	mov al, 13
+ml1:	shl bx, 1
+	rcl bp, 1
+	dec al
+	jnz ml1
+	xor di, bx
+	xor si, bp
+	mov bx, si
+	shr bx, 1
+	xor di, bx
+	mov bx, di
+	mov bp, si
+	mov al, 5
+ml2:	shl bx, 1
+	rcl bp, 1
+	dec al
+	jnz ml2
+	xor di, bx
+	xor si, bp
+	dec ah
+	jnz ml0				;Continue with next iteration of mix3.
+	pop bp
+	pop bx
+	ret
 
 header: 	                        ;Fejléc & Lábléc kiíró
 					;Hívás: string absoulute DS:SI
