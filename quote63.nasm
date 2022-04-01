@@ -59,7 +59,6 @@
 ; * 0...0x80: PSP (Program Segment Prefix), populated by DOS.
 ; * 0x80...0x100: String containing command-line arguments, populated by DOS.
 ;   It starts with the 8-bit variable named `param'.
-; * 0xf2...0xf4 (2 bytes): Variable named qqqqbefore. Overlaps command-line arguments.
 ; * 0x100... (at most 3840 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
 ; * 0x1000...0x1800 (2048 bytes): Variable named buffer, file preread buffer.
@@ -90,7 +89,6 @@ cpu 8086
 %define	index  word[1000h+buflen+2]	;Indextábla 1 az 1-ben
 %define offset_index (1000h+buflen+2)
 %define	param  byte[080h]
-%define	qqqqbefore word[0F2h]
 
 ;=======Kód
 _start:
@@ -357,6 +355,8 @@ y92:	mov [si], cl			;Set length of Pascal string.
 ;START OF ALIGN
 	; Calculate the value of BEFORE first using up AnsiCh:
 	; #0=Left '-'=Right '&'=Center alignment.
+	; Keeps DI intact.
+	push di
 	lodsb				;AL:=length(s), AL<>0.
 	mov dl, 0			;AnsiCh=dl is 0 by default
 	cmp byte [si], '-'
@@ -383,20 +383,20 @@ ya:     cmp dl, '&'
 	shr ax, 1
 	mov cx, 10
 yb:     sub bx, ax
-	mov qqqqbefore, bx
+	mov di, bx
 	mov ax, 0Eh*256+0b3h		;'│' Start the line
 	mov bh, 0
 	int 10h
 	mov bx, cx
 	mov cx, 78
 	call filld
-        ; Display the Pascal string at SI prefixed by qqqqbefore spaces.
+        ; Display the Pascal string at SI prefixed by DI spaces.
 	lodsb				;Get length of Pascal string.
 	mov cl, al
 	mov ch, 0
 	mov dx, cx
 	mov bh, 0
-	mov cx, qqqqbefore
+	mov cx, di
 	jcxz y5
 	mov ax, 256*0Eh+' '
 y2:     int 10h
@@ -407,7 +407,7 @@ y3:     lodsb
 	int 10h
 	loop y3
 y8:     mov cx, 78
-	sub cx, qqqqbefore
+	sub cx, di
 	sub cx, dx
 	jcxz y7
 	mov ax, 0Eh*256+' '
@@ -415,8 +415,9 @@ y4:     int 10h
 	loop y4
 y7:     mov ax, 0Eh*256+0b3h		;'│' The line ends by this, too.
 	int 10h
-	jmp lld				;A következő sor feldolgozása
+	pop di
 ;END OF ALIGN
+	jmp lld				;A következő sor feldolgozása
 
 ;(3)
 ;Itt kerülnek leírásra a meghívott függvények.
