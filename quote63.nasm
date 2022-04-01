@@ -348,14 +348,10 @@ y91:	cmp [di-1], bp			;Compare against CRLF, we try to match LF.
 	inc di				;Skip over LF.
 y92:	mov [si], cl			;Set length of Pascal string.
 
-
-;If S='' align returns TRUE else it returns FALSE. Align prints S with the
-;correct color & alignment according to the control codes found in S[1,2]
-
-;START OF ALIGN
+;=======Prints the Pascal string starting at SI with the correct color & alignment
+;       according to the control codes found at [SI] and [SI+1]. Keeps DI intact.
 	; Calculate the value of BEFORE first using up AnsiCh:
 	; #0=Left '-'=Right '&'=Center alignment.
-	; Keeps DI intact.
 	push di
 	lodsb				;AL:=length(s), AL<>0.
 	mov dl, 0			;AnsiCh=dl is 0 by default
@@ -416,8 +412,8 @@ y4:     int 10h
 y7:     mov ax, 0Eh*256+0b3h		;'│' The line ends by this, too.
 	int 10h
 	pop di
-;END OF ALIGN
-	jmp lld				;A következő sor feldolgozása
+
+	jmp strict near lld		;Display next line of our quote.
 
 ;(3)
 ;Itt kerülnek leírásra a meghívott függvények.

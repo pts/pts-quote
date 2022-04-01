@@ -418,14 +418,11 @@ lle:	mov ax, 00EC0h			;Üres sor=> Idézet vége, kilépés
 y91:    inc di
 	mov [si], cl			;Set length of Pascal string.
 
-
-;If S='' align returns TRUE else it returns FALSE. Align prints S with the
-;correct color & alignment according to the control codes found in S[1,2]
-
-;START OF ALIGN
-					;Calculate the value of BEFORE first
-					;using up AnsiCh: #0=Left '-'=Right
-	mov qqqqw, si                   ;'&'=Center alignment
+;=======Prints the Pascal string starting at SI with the correct color & alignment
+;       according to the control codes found at [SI] and [SI+1]. Keeps DI intact.
+	; Calculate the value of BEFORE first using up AnsiCh:
+	; #0=Left '-'=Right '&'=Center alignment.
+	mov qqqqw, si
 	lodsb				;AL:=length(s), AL<>0.
 	mov dl, 0			;AnsiCh=dl is 0 by default
 	cmp byte [si], '-'
@@ -483,8 +480,7 @@ y4:     int 10h
 	loop y4
 y7:     mov ax, 0Eh*256+0b3h		;'│' The line ends by this, too.
 	int 10h
-	jmp lld				;A következő sor feldolgozása
-;END OF ALIGN
+	jmp strict near lld		;Display next line of our quote.
 
 ;(3)
 ;Itt kerülnek leírásra a meghívott függvények.
