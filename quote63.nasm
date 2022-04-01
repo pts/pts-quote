@@ -164,8 +164,10 @@ l4:	cmp [si], bp
 	jne strict short l3
 	cmp byte[si+4], 13
 	je strict short l3		;Subsequent empty line is not a quote.
-	inc idxc			;Count the quote as total.
-	inc ax				;Count the quote within the block.
+	inc al				;Count the quote within the block.
+	jnz l4b
+	call error			;Too many quotes start in an 1024-byte block.
+l4b:	inc idxc			;Count the quote as total.
 l3:	inc si
 	loop l4
 
