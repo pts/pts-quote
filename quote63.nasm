@@ -59,10 +59,12 @@
 ; * 0...0x80: PSP (Program Segment Prefix), populated by DOS.
 ; * 0x80...0x100: String containing command-line arguments, populated by DOS.
 ;   It starts with the 8-bit variable named `param'.
-; * 0x100... (at most 1274 bytes): .com file (code and data) loaded by DOS.
+; * 0x100... (at most 1272 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
-; * 0x5fa...0x9fe (1028 bytes): Variable named buffer, file preread buffer.
+; * 0x5f8...0x9fc (1028 bytes): Variable named buffer, file preread buffer.
 ;   When reading our quote, it continues and overlaps idxc and index.
+; * 0x9fc...0x9fe (2 bytes): Variable named idxchw, contains the high 16 bits
+;   of total number of quotes.
 ; * 0x9fe...0xa00 (2 bytes): Variable named idxc, contains the low 16 bits
 ;   of total number of quotes. First 2 bytes of the quote.idx file.
 ; * 0xa00...0xff00 (62720 bytes): Array variable named index, index entries:
@@ -87,11 +89,11 @@ cpu 8086
 
 ;=======Uninitialized data (_bss).
 %define	buffer word[_bss]		;quote.txt file preread buffer.
-%define offset_buffer _bss		;buffer overlaps idxc and index when reading our quote.
-%define	idxc   word[_bss+buflen]	;Total number of quotes.
-%define offset_idxc (_bss+buflen)
-%define	index  word[_bss+buflen+2]	;Index table: 1 byte for each 1024-byte block of quote.txt.
-%define offset_index (_bss+buflen+2)
+%define offset_buffer _bss		;buffer overlaps idxchw, idxc and index when reading our quote.
+%define	idxchw word[_bss+buflen]	;High 16 bits of total number of quotes.
+%define offset_idxchw (_bss+buflen)
+%define	idxc   word[_bss+buflen+2]	;Low 16 bits of total number of quotes.
+%define offset_idxc (_bss+buflen+2)
 %define	index  word[_bss+buflen+4]	;Index table: 1 byte for each 1024-byte block of quote.txt.
 %define offset_index (_bss+buflen+4)
 %define	param  byte[080h]
@@ -104,6 +106,7 @@ _start:
 	;db 'POTTERSOFTWARE_FORTUNE_TELLER_2.63', 13, 10, 26, 0x83, 0xc4, 0x16
 	xor bx, bx
 	mov idxc, bx
+	mov idxchw, bx
 
 	cmp param, 2
 	je strict short l18
@@ -205,7 +208,7 @@ l19:	cmp param, 2
 ne4:
 l5:	push bx
 
-;=======Generates 32-bit random number in SI:DI. Clobbers flags, AX, BX, CX.
+;=======Generates 32-bit random seed in SI:DI. Clobbers flags, AX, BX, CX.
 	mov ah, 0			;Read system clock counter to CX:DX.
 	int 0x1a
 	mov si, cx
@@ -227,17 +230,31 @@ l5:	push bx
 	call mixes3_si_di
 	; Now SI:DI is a 32-bit random number.
 
-;=======Generates random CX:DX:=random(0:idxc) from random SI:DI.
-;       It does the multiplicatin (0:idxc) * (SI:DI), and keeps the highest
-;       32 bits of the 64-bit result.
-;       Clobbers flags, AX, SI, DI.
-	xchg ax, di			;Clobbers DI, we don't care.
-	mul idxc
-	xchg ax, si			;Clobbers SI, we don't care.
-	mov si, dx
-	mul idxc
-	add ax, si
-	adc dx, byte 0			;DX:=random(0:idxc).
+;=======Generates random CX:DX:=random(idxchw:idxc) from random seed SI:DI.
+;       It does the multiplication (idxchw:idxc) * (SI:DI), and keeps the
+;       highest 32 bits of the 64-bit result.
+;       Clobbers flags, AX, BX, SI, DI.
+	mov ax, di
+	mul word idxchw  ; DX:AX = ((idxchw*DI))  ; Since idxchw<0x100, CX=DX<0x100.
+	mov cx, dx
+	xchg bx, ax  ; Clobbers AX. We don't care.
+	xchg ax, di  ; Clobbers DI. We don't care.
+	mul word idxc  ; DX:AX = ((idxc*DI))  ; Result ax will be ignored.
+	add bx, dx
+	adc cx, byte 0  ; No overflow here since CX<0x100.
+	mov ax, si
+	mul word idxc  ; DX:AX = ((idxc*SI))
+	add ax, bx  ; Result ax and bx will be ignored.
+	adc cx, dx  ; Overflow goes to CF.
+	pushf
+	xchg ax, si  ; Clobbers SI, we don't care.
+	mul word idxchw  ; DX:AX = ((idxchw*SI))
+	popf
+	xchg ax, dx
+	adc dx, cx
+	adc ax, byte 0
+	xchg cx, ax  ; Clobbers AX. We don't care.
+	; CX:DX:=random(idxchw:idxc)
 
 ;=======Finds block index (as SI-offset_index) of the quote with index DX.
 	pop bx
