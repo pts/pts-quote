@@ -71,10 +71,11 @@
 ; * 0x1000...0x1800 (2048 bytes): Variable named buffer, file preread buffer.
 ;   Continues and overlaps idxc and index.
 ; * 0x1800...0x1802 (2 bytes): Variable named idxc, contains total number of
-;   quotes.
+;   quotes. First 2 bytes of the quote.idx file.
 ; * 0x1802...0xf402 (56320 bytes): Array variable named index, index entries:
 ;   each byte contains the total number of quotes whose first byte is in the
-;   corresponding 1024-byte block of quote.txt.
+;   corresponding 1024-byte block of quote.txt. Remaining bytes of the
+;   quote.idx file.
 ; * 0xf402...0x10000 (3070 bytes): Stack, it grows from high to low offsets.
 ;   Before jumping to 0x100, DOS pushes the exit address 0 within the PSP
 ;   (containing an `int 20h' instruction), so that a simple `ret' will exit
@@ -187,23 +188,24 @@ org 0x100
 bits 16
 cpu 286  ; Some instructions below (such as higher-than-1 bit shifts) need 286.
 
-;=======Konstansok
+;=======Size-measuring constants.
+	_bss equ 1000h
 	buflen equ 2048
 	idxlen equ 55*1024
 	quote_max equ 4096
 
-;=======Kezdőérték nélküli adatok
-%define	buffer word[1000h]		;Fájl-előreolvasó buffer
-%define offset_buffer 1000h
-%define	idxc   word[1000h+buflen]	;Total number of quotes. IDXC és INDEX egymás után van!!!
-%define offset_idxc (1000h+buflen)
-%define	index  word[1000h+buflen+2]	;Indextábla 1 az 1-ben
-%define offset_index (1000h+buflen+2)
+;=======Uninitialized data (_bss).
+%define	buffer word[_bss]		;quote.txt file preread buffer.
+%define offset_buffer _bss		;buffer overlaps idxc and index when reading our quote.
+%define	idxc   word[_bss+buflen]	;Total number of quotes.
+%define offset_idxc (_bss+buflen)
+%define	index  word[_bss+buflen+2]	;Index table: 1 byte for each 1024-byte block of quote.txt.
+%define offset_index (_bss+buflen+2)
 %define	qqqqw  word[0F0h]
 %define	param  byte[080h]
 %define	qqqqbefore word[0F2h]
 
-;=======Kód
+;=======Code (_code).
 _start:
 	a86_xor bx, bx
 	mov idxc, bx

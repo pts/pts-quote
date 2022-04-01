@@ -63,11 +63,12 @@
 ;   Entry point is at the beginning, has label _start for convenience.
 ; * 0x5fa...0x9fe (1028 bytes): Variable named buffer, file preread buffer.
 ;   When reading our quote, it continues and overlaps idxc and index.
-; * 0x9fe...0xa00 (2 bytes): Variable named idxc, contains total number of
-;   quotes.
+; * 0x9fe...0xa00 (2 bytes): Variable named idxc, contains the low 16 bits
+;   of total number of quotes. First 2 bytes of the quote.idx file.
 ; * 0xa00...0xff00 (62720 bytes): Array variable named index, index entries:
 ;   each byte contains the total number of quotes whose first byte is in the
-;   corresponding 1024-byte block of quote.txt.
+;   corresponding 1024-byte block of quote.txt. Remaining bytes of the
+;   quote.idx file.
 ; * 0xff00...0x10000 (256 bytes): Stack, it grows from high to low offsets.
 ;   Before jumping to 0x100, DOS pushes the exit address 0 within the PSP
 ;   (containing an `int 20h' instruction), so that a simple `ret' will exit
@@ -78,22 +79,24 @@ org 0x100
 bits 16
 cpu 8086
 
-;=======Konstansok
-	_bss equ 0x5fa
+;=======Size-measuring constants.
+	_bss equ 0x5f8
 	buflen equ 1024+4
 	idxlen equ 0xf500  ; 61.25 KiB
 	quote_limit equ 4096  ; All quotes must be shorter than this. For compatibility with earlier versions.
 
-;=======Kezdőérték nélküli adatok
-%define	buffer word[_bss]		;Fájl-előreolvasó buffer
-%define offset_buffer _bss		;buffer overlaps idxc and index when reading the final quote.
-%define	idxc   word[_bss+buflen]	;Total number of quotes. IDXC és INDEX egymás után van!!!
+;=======Uninitialized data (_bss).
+%define	buffer word[_bss]		;quote.txt file preread buffer.
+%define offset_buffer _bss		;buffer overlaps idxc and index when reading our quote.
+%define	idxc   word[_bss+buflen]	;Total number of quotes.
 %define offset_idxc (_bss+buflen)
-%define	index  word[_bss+buflen+2]	;Indextábla 1 az 1-ben
+%define	index  word[_bss+buflen+2]	;Index table: 1 byte for each 1024-byte block of quote.txt.
 %define offset_index (_bss+buflen+2)
+%define	index  word[_bss+buflen+4]	;Index table: 1 byte for each 1024-byte block of quote.txt.
+%define offset_index (_bss+buflen+4)
 %define	param  byte[080h]
 
-;=======Kód
+;=======Code (_code).
 _start:
 	; Vanity header. It is mostly a no-op at the beginning of a DOS .com file.
 	; The version number digits after 2. can be arbitrary.
