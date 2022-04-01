@@ -343,12 +343,12 @@ lle:	mov ax, 00EC0h			;Üres sor=> Idézet vége, kilépés
 	call header
 	mov bx, 7
 	call fillc
-	ret				;int 20h, Program vége
+	ret				;Exit with int 20h.
 
 y91:	cmp [di-1], bp			;Compare against CRLF, we try to match LF.
 	jne strict short y92
 	inc di				;Skip over LF.
-y92:	mov [si], cl			;Beállítjuk a PasStr hosszát
+y92:	mov [si], cl			;Set length of Pascal string.
 
 
 ;If S='' align returns TRUE else it returns FALSE. Align prints S with the

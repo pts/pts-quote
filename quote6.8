@@ -289,10 +289,10 @@ lle:	mov ax, 00EC0h			;Üres sor=> Idézet vége, kilépés
 	call header
 	mov bx, 7
 	call fillc
-	ret				;int 20h, Program vége
+	ret				;Exit with int 20h.
 
 y91:    inc di
-	mov [si], cl		;Beállítjuk a PasStr hosszát
+	mov [si], cl			;Set length of Pascal string.
 
 
 ;If S='' align returns TRUE else it returns FALSE. Align prints S with the
