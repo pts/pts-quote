@@ -59,7 +59,6 @@
 ; * 0...0x80: PSP (Program Segment Prefix), populated by DOS.
 ; * 0x80...0x100: String containing command-line arguments, populated by DOS.
 ;   It starts with the 8-bit variable named `param'.
-; * 0xf0...0xf2 (2 bytes): Variable named qqqqw. Overlaps command-line arguments.
 ; * 0xf2...0xf4 (2 bytes): Variable named qqqqbefore. Overlaps command-line arguments.
 ; * 0x100... (at most 3840 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
@@ -90,7 +89,6 @@ cpu 8086
 %define offset_idxc (1000h+buflen)
 %define	index  word[1000h+buflen+2]	;Indextábla 1 az 1-ben
 %define offset_index (1000h+buflen+2)
-%define	qqqqw  word[0F0h]
 %define	param  byte[080h]
 %define	qqqqbefore word[0F2h]
 
@@ -357,19 +355,20 @@ y92:	mov [si], cl			;Beállítjuk a PasStr hosszát
 ;correct color & alignment according to the control codes found in S[1,2]
 
 ;START OF ALIGN
-					;Calculate the value of BEFORE first
-					;using up AnsiCh: #0=Left '-'=Right
-	mov qqqqw, si                   ;'&'=Center alignment
+	; Calculate the value of BEFORE first using up AnsiCh:
+	; #0=Left '-'=Right '&'=Center alignment.
 	lodsb				;AL:=length(s), AL<>0.
 	mov dl, 0			;AnsiCh=dl is 0 by default
 	cmp byte [si], '-'
 	jne strict short yc
-	add qqqqw, byte 2		;Ha AnsiCh<>0 => s[1,2] kihagyása
 	dec ax
 	dec ax
 	mov dx, ax
-	xchg [si+1], dl			;length odébbmásolása, új AnsiCh
-yc:     mov ah, 0
+	inc si
+	xchg [si], dl			;Copy Pascal string length, get new AnsiCh.
+	inc si				;Skip first 2 characters (-- or -&).
+yc:     dec si
+	mov ah, 0
 	mov bx, 78
 	mov cx, 15
 	cmp dl, 0
@@ -391,8 +390,7 @@ yb:     sub bx, ax
 	mov bx, cx
 	mov cx, 78
 	call filld
-	; Display the Pascal string at qqqqw prefixed by qqqqbefore spaces.
-	mov si, qqqqw
+        ; Display the Pascal string at SI prefixed by qqqqbefore spaces.
 	lodsb				;Get length of Pascal string.
 	mov cl, al
 	mov ch, 0
