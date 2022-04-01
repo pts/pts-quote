@@ -177,9 +177,9 @@ l3:	inc si
 	lodsw
 	mov [offset_buffer+2], ax
 	mov si, offset_buffer
-	cmp di, idxlen
+	cmp di, offset_index+idxlen
 	jne strict short l2
-	push di				;Push error code.
+	push di				;Push error code. Error: quote.txt too long, index full.
 
 error:  mov al, 7			;General error message
 	int 29h				;Beep
