@@ -15,9 +15,9 @@
 ; Compiles with NASM 0.98.39 or later. Produces identical output with
 ; NASM 2.13.02 (with both -O0 and -O9).
 ;
-
+;
 ;I read from QUOTE.TXT, and I read/write/keep QUOTE.IDX in the current dir.
-
+;
 ;If you do not specify the command line parameter, first I check for .idx If
 ;I can't find it, I generate it. Then using up the .idx I display a random
 ;quote from .txt in the speed of light.
@@ -63,13 +63,15 @@
 ;   Entry point is at the beginning, has label _start for convenience.
 ; * 0x5fa...0x9fe (1028 bytes): Variable named buffer, file preread buffer.
 ;   When reading our quote, it continues and overlaps idxc and index.
-; * 0x9fe...0xa00 (2 bytes): Variable named idxc, contains total number of quotes.
-; * 0xa00...0xff00 (62720 bytes): Array variable named index, index
-;   entries: each byte contains the total number of quotes whose first byte is in the
+; * 0x9fe...0xa00 (2 bytes): Variable named idxc, contains total number of
+;   quotes.
+; * 0xa00...0xff00 (62720 bytes): Array variable named index, index entries:
+;   each byte contains the total number of quotes whose first byte is in the
 ;   corresponding 1024-byte block of quote.txt.
-; * 0xff00...0x10000 (256 bytes): Stack, it grows from high to low offsets. Before
-;   jumping to 0x100, DOS pushes the exit address 0 within the PSP (containing an
-;   `int 20h' instruction), so that a simple `ret' will exit the program.
+; * 0xff00...0x10000 (256 bytes): Stack, it grows from high to low offsets.
+;   Before jumping to 0x100, DOS pushes the exit address 0 within the PSP
+;   (containing an `int 20h' instruction), so that a simple `ret' will exit
+;   the program.
 ;
 
 org 0x100
