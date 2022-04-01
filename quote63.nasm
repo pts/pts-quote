@@ -142,15 +142,15 @@ nc1:	push ax				;Save file handle
 	pop bx				;Restore .txt handle
 	jmp l5
 
-;=======Generáljuk az indexfájlt
-gen:	pop bx				;Get handle of quote.txt
+;=======Starts generating the index file quote.idx.
+gen:	pop bx				;Get handle of quote.txt.
 	mov si, offset_buffer
 	mov di, offset_index
 	mov bp, 0A0Dh
 	mov [si], bp
 	mov [si+2], bp
 
-l2:	mov ah, 3Fh
+l2:	mov ah, 3Fh			;Read next 1024-byte block.
 	mov cx, 1024
 	mov dx, offset_buffer+4
 	int 21h
@@ -164,12 +164,12 @@ l4:	cmp [si], bp
 	jne strict short l3
 	cmp byte[si+4], 13
 	je strict short l3		;Subsequent empty line is not a quote.
-	inc idxc			;Megszámolunk egy idézetet
-	inc ax				;Az 1K-kon belül is
+	inc idxc			;Count the quote as total.
+	inc ax				;Count the quote within the block.
 l3:	inc si
 	loop l4
 
-	stosb				;Az adat felvétele az indextáblába
+	stosb				;Add byte for current block to index.
 	lodsw
 	mov [offset_buffer], ax
 	lodsw
@@ -177,7 +177,7 @@ l3:	inc si
 	mov si, offset_buffer
 	cmp di, idxlen
 	jne strict short l2
-	push di				;Push error code
+	push di				;Push error code.
 
 error:  mov al, 7			;General error message
 	int 29h				;Beep
