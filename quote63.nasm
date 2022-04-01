@@ -391,9 +391,9 @@ yb:     sub bx, ax
 	mov bx, cx
 	mov cx, 78
 	call filld
-y6:     				;Display the string "s" with "before"
+	; Display the Pascal string at qqqqw prefixed by qqqqbefore spaces.
 	mov si, qqqqw
-	lodsb
+	lodsb				;Get length of Pascal string.
 	mov cl, al
 	mov ch, 0
 	mov dx, cx
