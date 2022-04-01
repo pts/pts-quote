@@ -66,13 +66,14 @@ File format of the text file quote.txt as of version 2.63:
   and it will be highlighted.
 * Otherwise lines must not start with - .
 * The file quote.txt must be at most 61.25 MiB in size.
-* The file quote.txt must contain at least 1 and at most 65535 quotes.
-  (Later updates will increase this to 12 845 056 quotes: 5 bytes each for
-  61.25 MiB.)
+* The file quote.txt must contain at least 1 quote.
+* There is no upper limit on the number of quotes in quote.txt, but because
+  of the size limit it's at most 12 845 056 quotes: 5 bytes each for 61.25
+  MiB.
 * There is no validator. The program will misbehave for nonconforming
   quote.txt files.
 
-Further restriction on quote.txt imposed by some earlier versions:
+Further restrictions on quote.txt imposed by some earlier versions:
 
 * Each line including the last one must be terminated with a CRLF (\r\n,
   ASCII 10 + 13).
@@ -84,10 +85,8 @@ Further restriction on quote.txt imposed by some earlier versions:
 * Quotes must not be empty (i.e. CRLF + CRLF must not be followed by CRLF).
 * Each quote must fit to 4095 bytes (including the trailing CRLF + CRLF).
 * The file quote.txt must be at most 55 MiB in size in versions <=2.62.
-* The file quote.txt must contain at least 1 and at most 24160 quotes in
-  versions <2.60.
-* The file quote.txt must contain at least 1 and at most 65535 quotes in
-  version 2.62.
+* The file quote.txt must contain at most 24160 quotes in versions <2.60.
+* The file quote.txt must contain at most 65535 quotes in version 2.62.
 
 About the index file quote.idx:
 

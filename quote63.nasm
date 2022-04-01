@@ -125,7 +125,7 @@ l18:	mov ax, 3D00h
 nc1:	push ax				;Save file handle
 
 	mov ax, 3D00h
-	mov dx, idxfn
+	mov dx, idxfn			;Open index file quote.idx
 	int 21h
 	mov dl, param
 	adc dl, 0
@@ -137,9 +137,26 @@ nc1:	push ax				;Save file handle
 	mov cx, idxlen+2
 	mov dx, offset_idxc
 	int 21h
+	jnc nc8
+e8:	call error			;Error reading the index file.
+nc8:	sub ax, byte 2
+	js e8				;Error: Index file too short (less than 3 bytes).
+	xchg cx, ax			;Clobber AX, we don't care.
 	mov ah, 3Eh
 	int 21h
 	pop bx				;Restore .txt handle
+
+;=======Recomputes idxchw:idxc by summing all byte values in the index.
+;	We don't use the idxc value in the beginning of the index file
+;	quote.idx, because it's 16-bit only, and we may need 32 bits.
+;	Prerequisite: CX = number of 1024-block bytes in the index.
+	xor ax, ax
+	mov idxc, ax			;Clear it after read above.
+	mov si, offset_index
+r1:	lodsb
+	add idxc, ax
+	adc idxchw, byte 0
+	loop r1
 	jmp l5
 
 ;=======Starts generating the index file quote.idx.
@@ -167,7 +184,8 @@ l4:	cmp [si], bp
 	inc al				;Count the quote within the block.
 	jnz l4b
 	call error			;Too many quotes start in an 1024-byte block.
-l4b:	inc idxc			;Count the quote as total.
+l4b:	add idxc, byte 1		;Count the quote as total.
+	adc idxchw, byte 0
 l3:	inc si
 	loop l4
 
@@ -258,17 +276,20 @@ l5:	push bx
 	xchg cx, ax  ; Clobbers AX. We don't care.
 	; CX:DX:=random(idxchw:idxc)
 
-;=======Finds block index (as SI-offset_index) of the quote with index DX.
+;=======Finds block index (as SI-offset_index) of the quote with index CX:DX.
 	pop bx
 	mov si, offset_index
 	mov ah, 0
 l7:	lodsb
+	test cx, cx
+	jnz l7b				;More than 65535 quotes, continue.
 	cmp dx, ax
 	js strict short l6
-	sub dx, ax
+l7b:	sub dx, ax
+	sbb cx, byte 0
 	jmp strict short l7
 
-;=======Seeks to the block of our quote with index DX.
+;=======Seeks to the block of our quote with index CX:DX.
 l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).
 	push dx				;Now: DX: quote index within the block.
 	mov bp, 0A0Dh
