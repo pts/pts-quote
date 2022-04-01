@@ -545,8 +545,8 @@ ploop2:	dec ax
 	loop y72
 	ret
 
-;=======Kezdőértékes adatok
-txtfn	db 'QUOTE.TXT',0
-idxfn	db 'QUOTE.IDX',0
+;=======Data with initial value (_data).
+txtfn		db 'QUOTE.TXT',0
+idxfn		db 'QUOTE.IDX',0
 headermsg	db 34,'PotterSoftware Fortune Teller 2.6'  ; Size 34 should be 33.
 footermsg	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
