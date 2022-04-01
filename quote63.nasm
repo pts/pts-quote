@@ -361,7 +361,7 @@ y92:	mov [si], cl			;Beállítjuk a PasStr hosszát
 					;using up AnsiCh: #0=Left '-'=Right
 	mov qqqqw, si                   ;'&'=Center alignment
 	lodsb				;AL:=length(s), AL<>0.
-yd:     mov dl, 0			;AnsiCh=dl is 0 by default
+	mov dl, 0			;AnsiCh=dl is 0 by default
 	cmp byte [si], '-'
 	jne strict short yc
 	add qqqqw, byte 2		;Ha AnsiCh<>0 => s[1,2] kihagyása
