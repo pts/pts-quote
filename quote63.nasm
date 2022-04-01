@@ -59,15 +59,15 @@
 ; * 0...0x80: PSP (Program Segment Prefix), populated by DOS.
 ; * 0x80...0x100: String containing command-line arguments, populated by DOS.
 ;   It starts with the 8-bit variable named `param'.
-; * 0x100... (at most 3840 bytes): .com file (code and data) loaded by DOS.
+; * 0x100... (at most 1274 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
-; * 0x1000...0x1800 (2048 bytes): Variable named buffer, file preread buffer.
-;   Continues and overlaps idxc and index.
-; * 0x1800...0x1802 (2 bytes): Variable named idxc, contains total number of quotes.
-; * 0x1802...0xf402 (56320 bytes): Array variable named index, index
+; * 0x5fa...0x9fe (1028 bytes): Variable named buffer, file preread buffer.
+;   When reading our quote, it continues and overlaps idxc and index.
+; * 0x9fe...0xa00 (2 bytes): Variable named idxc, contains total number of quotes.
+; * 0xa00...0xff00 (62720 bytes): Array variable named index, index
 ;   entries: each byte contains the total number of quotes whose first byte is in the
 ;   corresponding 1024-byte block of quote.txt.
-; * 0xf402...0x10000 (3070 bytes): Stack, it grows from high to low offsets. Before
+; * 0xff00...0x10000 (256 bytes): Stack, it grows from high to low offsets. Before
 ;   jumping to 0x100, DOS pushes the exit address 0 within the PSP (containing an
 ;   `int 20h' instruction), so that a simple `ret' will exit the program.
 ;
@@ -77,17 +77,18 @@ bits 16
 cpu 8086
 
 ;=======Konstansok
-	buflen equ 2048
-	idxlen equ 55*1024
+	_bss equ 0x5fa
+	buflen equ 1024+4
+	idxlen equ 0xf500  ; 61.25 KiB
 	quote_limit equ 4096  ; All quotes must be shorter than this. For compatibility with earlier versions.
 
 ;=======Kezdőérték nélküli adatok
-%define	buffer word[1000h]		;Fájl-előreolvasó buffer
-%define offset_buffer 1000h		;buffer overlaps idxc and index when reading the final quote.
-%define	idxc   word[1000h+buflen]	;Total number of quotes. IDXC és INDEX egymás után van!!!
-%define offset_idxc (1000h+buflen)
-%define	index  word[1000h+buflen+2]	;Indextábla 1 az 1-ben
-%define offset_index (1000h+buflen+2)
+%define	buffer word[_bss]		;Fájl-előreolvasó buffer
+%define offset_buffer _bss		;buffer overlaps idxc and index when reading the final quote.
+%define	idxc   word[_bss+buflen]	;Total number of quotes. IDXC és INDEX egymás után van!!!
+%define offset_idxc (_bss+buflen)
+%define	index  word[_bss+buflen+2]	;Indextábla 1 az 1-ben
+%define offset_index (_bss+buflen+2)
 %define	param  byte[080h]
 
 ;=======Kód
