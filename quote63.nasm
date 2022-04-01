@@ -224,16 +224,17 @@ l5:	push bx
 	call mixes3_si_di
 	; Now SI:DI is a 32-bit random number.
 
-;=======Generates random DX:=random(idxc) from random SI:DI.
-;       Clobbers flags, AX, BX.
-	mov bx, si
-	xchg ax, di
+;=======Generates random CX:DX:=random(0:idxc) from random SI:DI.
+;       It does the multiplicatin (0:idxc) * (SI:DI), and keeps the highest
+;       32 bits of the 64-bit result.
+;       Clobbers flags, AX, SI, DI.
+	xchg ax, di			;Clobbers DI, we don't care.
 	mul idxc
-	mov ax, bx
-	mov bx, dx
+	xchg ax, si			;Clobbers SI, we don't care.
+	mov si, dx
 	mul idxc
-	add ax, bx
-	adc dx, byte 0			;DX:=random(idxc).
+	add ax, si
+	adc dx, byte 0			;DX:=random(0:idxc).
 
 ;=======Finds block index (as SI-offset_index) of the quote with index DX.
 	pop bx
