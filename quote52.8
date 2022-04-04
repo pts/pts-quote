@@ -27,10 +27,17 @@
 ; * 'C'-> Create index table.
 ;
 
+; Force generating a near jump (white 2-byte offset).
 jmp_near macro
   db 0e9h
-  ;jmp long #1  ; This sometimes generates a short jump.
+  ;jmp long #1  ; This sometimes generates a short jump (with 1-byte offset).
   dw (#1)-$-2
+#em
+
+; Force generating of a 1-byte, sign-extended push, even iff the value of #1
+; is not known yet. (If the value is known, `push ...' also works.)
+push_byte macro
+  db 06ah, (#1)
 #em
 
 full= 04000h
@@ -64,7 +71,7 @@ mov ax,0E0Dh  ; @  B80D0E
 int 010h  ; @  CD10
 mov al,0Ah  ; @  B00A
 int 010h  ; @  CD10
-db 06ah, headermsg_data  ;!! push byte +018h  ; @  6A18
+push_byte headermsg_data  ; @0x0119  6A18
 call func_Header  ; @  E89003
 mov al,[cs:081h]  ; @  2EA08100
 cmp al,' '  ; @  3C20
@@ -434,7 +441,7 @@ jmp_near lx_339  ; @  E9F1FE
 lx_448:
 mov dx,0D9C0h  ; @  BAC0D9
 call func_PrintLine  ; @  E8BF00
-db 06ah, footermsg_data  ;!! push byte +03Bh  ; @  6A3B
+push_byte footermsg_data  ; @0x044F  6A3B
 call func_Header  ; @  E85A00
 mov ah,03Eh  ; @  B43E
 mov bx,[02Eh]  ; @  8B1E2E00
