@@ -46,18 +46,23 @@ offset_var_s= offset_buf
 
 _code:
 _start:
-mov ax,ds  ; @0x0100  8CD8
-add ax,seg_delta  ; @0x0102  055400
-mov ds,ax  ; @0x0105  8ED8
+
+; Increase DS and SS to accommodate for the total memory usage of 68 KiB (67
+; KiB for code and data + 1 KiB for stack).
+;
 ; Here is how we could increase the memory usage to 68 KiB (67 KiB needed for code
 ; and data + 1 KiB for stack):
 ; mov ah, 04Ah  ; https://stanislavs.org/helppc/int_21-4a.html
-; mov bx, 01100h  ; Number of bytes needed == 0x1100h * 16, that's 68 KiB.
+; mov bx, 01100h  ; Number of bytes needed == 1100h * 16, that's 68 KiB.
 ; int 21h
 ; Then abort if CF is set.
+mov ax,ds  ; @0x0100  8CD8
+add ax,seg_delta  ; @0x0102  055400
+mov ds,ax  ; @0x0105  8ED8
 mov ax,ss  ; @0x0107  8CD0
 add ax,0100h  ; @0x0109  050001  ; 1 KiB of stack at the end of the 68 KiB.
 mov ss,ax  ; @0x010C  8ED0
+
 mov bh,00h  ; @0x010E  B700
 mov ax,0E0Dh  ; @0x0110  B80D0E
 int 010h  ; @0x0113  CD10
@@ -432,7 +437,7 @@ mov bx,07h  ; @0x045C  BB0700
 call lx_523  ; @0x045F  E8C100
 lx_462:
 mov ah,04Ch  ; @0x0462  B44C
-int 021h  ; @0x0464  CD21
+int 021h  ; @0x0464  CD21  ; Exit to DOS, with arbitrary exit code. Bug: should be EXIT_SUCCESS (0).
 
 ; May ruin SI and possibly other registers.
 func_GetNext:
