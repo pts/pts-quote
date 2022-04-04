@@ -41,7 +41,7 @@ full= 04000h
 qqq_a= [018h]w
 qqq_w= [01Ch]w
 offset_qqq_l= 01Eh
-offset_buf= 068h
+offset_buf= 068h  ; full+4 bytes used for multiple purposes.
 offset_var_s= offset_buf
 
 _code:
@@ -214,10 +214,10 @@ mov [02Eh],ax  ; @  A32E00
 jnc lx_283  ; @  7303
 jmp_near exit  ; @  E9DF01
 lx_283:
-; blockread(f, buf, $FFFF, reg_cx);
+; blockread(f, buf, full+4, reg_cx);
 mov ah,03Fh  ; @  B43F
 mov bx,[02Eh]  ; @  8B1E2E00
-mov cx,0FFFFh  ; @  B9FFFF  ; BUG: To avoid buffer overflow, read just full+4 instead of $FFFF.
+mov cx,full+4  ; @  B9FFFF
 mov dx,offset_buf  ; @  BA6800
 int 021h  ; @  CD21
 mov cx,ax  ; @  A31800  ; Save number of (compressed) bytes read to cx, for below.

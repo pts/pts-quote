@@ -293,11 +293,10 @@ lls:    { XReset(IDXFN); }
 	int 21h
 	{ BUG: Fail. }
 	mov qqq.han, ax
-	{ blockread(f, buf, $FFFF, reg_ax); }
+	{ blockread(f, buf, full+4, reg_ax); }
 	mov ah, 3Fh
 	mov bx, qqq.han
-	{ BUG: To avoid buffer overflow, read just full+4 instead of $FFFF. }
-	mov cx, $FFFF
+	mov cx, full+4
         mov dx, offset buf
         int 21h
 	mov cx, ax  { Save number of (compressed) bytes read to cx, for below. }
