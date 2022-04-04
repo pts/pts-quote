@@ -5,6 +5,11 @@ quote3.pas: PotterSoftware Quote Displayer V2.33 (Turbo Pascal 7.0 inline assemb
 
 Compile it with Turbo Pascal 7.0 on DOS, generate quote3.exe: tpc quote3.pas
 
+Reproduces the original quote3.exe.orig (2848 bytes).
+
+This source file is for archival purposes only.
+Bugfixes and features shouldn't be added to this file, but to quote34.pas.
+
 This program (quote3.exe) is buggy in both DOSBox
 and QEMU, it usually hangs after printing the header correctly.
 It is because of the slow random number generator. It also has some other

@@ -15,6 +15,9 @@
 ; Compiles with NASM 0.98.39 or later. Produces identical output with
 ; NASM 2.13.02 (with both -O0 and -O9).
 ;
+; This source file is for archival purposes only.
+; Bugfixes and features shouldn't be added to this file, but to quote63.nasm.
+;
 ;I read from QUOTE.TXT, and I read/write/keep QUOTE.IDX in the current dir.
 ;
 ;If you do not specify the command line parameter, first I check for .idx If
