@@ -131,7 +131,7 @@ nc1:	push ax				;Save file handle
 	adc dl, 0
 	jnz strict short gen
 	
-;=======Beolvassuk az indextáblát
+;=======Reads the index file quote.txt.
 	mov bx, ax
 	mov ah, 3Fh
 	mov cx, idxlen+2
@@ -227,7 +227,9 @@ l19:	cmp param, 2
 	jne strict short ne4
 	ret				;Exit with int 20h.
 ne4:
-l5:	push bx
+
+;=======Continues after quote.idx has been read or generated.
+l5:	push bx				;Save handle of quote.txt.
 
 ;=======Generates 32-bit random seed in SI:DI. Clobbers flags, AX, BX, CX.
 	mov ah, 0			;Read system clock counter to CX:DX.
@@ -278,7 +280,7 @@ l5:	push bx
 	; CX:DX:=random(idxchw:idxc)
 
 ;=======Finds block index (as SI-offset_index) of the quote with index CX:DX.
-	pop bx
+	pop bx				;Restore handle of quote.txt.
 	mov si, offset_index
 	mov ah, 0
 l7:	lodsb

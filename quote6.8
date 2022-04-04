@@ -113,7 +113,7 @@ l18:	mov ax, 3D00h
 	adc dl, 0
 	jnz gen
 	
-;=======Beolvassuk az indextáblát
+;=======Reads the index file quote.txt.
 	mov bx, ax
 	mov ah, 3Fh
 	mov cx, idxlen+2
@@ -186,8 +186,11 @@ l1:	cmp param, 5
 l19:	cmp param, 2
 	if e ret			;Exit with int 20h.
 
+;=======Continues after quote.idx has been read or generated.
+l5:
+
 ;=======Generates 32-bit random number in DX:AX. Clobbers flags, BP, BX, CX.
-l5:	mov ah, 0
+	mov ah, 0
 	int 1Ah				;Get time-random seed in CX:DX
 	push bx
 	xor bp, bp

@@ -232,7 +232,7 @@ nc1:	push ax				;Save file handle
 	adc dl, 0
 	jnz strict short gen
 	
-;=======Beolvassuk az indextáblát
+;=======Reads the index file quote.txt.
 	a86_mov bx, ax
 	mov ah, 3Fh
 	mov cx, idxlen+2
@@ -309,8 +309,11 @@ l19:	cmp param, 2
 	ret				;Exit with int 20h.
 ne4:
 
+;=======Continues after quote.idx has been read or generated.
+l5:
+
 ;=======Generates 32-bit random number in DX:AX. Clobbers flags, BP, BX, CX.
-l5:	mov ah, 0
+	mov ah, 0
 	int 1Ah				;Get time-random seed in CX:DX
 	push bx
 	a86_xor bp, bp
