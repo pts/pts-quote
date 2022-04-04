@@ -218,10 +218,10 @@ mov dx, idxfn
 int 0x21
 mov [qqq_han], ax
 ;jc strict near fatal_error  ; BUG: Fail.
-; blockread(f, buf, $FFFF, reg_ax);
+; blockread(f, buf, full+4, reg_ax);
 mov ah, 0x3f
 mov bx, [qqq_han]
-mov cx, 0xffff  ; BUG: To avoid buffer overflow, read just full+4 instead of $FFFF.
+mov cx, full+4
 mov dx, buf
 int 0x21
 mov cx, ax  ; Save number of (compressed) bytes read to cx, for below.
@@ -608,7 +608,7 @@ _data_end:
 
 ; _bss: (Uninitialized data.)
 full equ 16384  ; Just a size.
-buf equ _data_end+((_data_end-$$)&1)-_data  ; array[0..full+4] of char;  Aligned.
+buf equ _data_end+((_data_end-$$)&1)-_data  ; array[0..full+4-1] of char;  Aligned.
 var_s equ buf  ; string; overlaps buf
 idx equ buf+full+4+((buf+_data+full+4-$$)&1)  ; array[0..24160] of word;  ; Aligned.
 qqq_a equ headermsg  ; word; overlaps headermsg.
