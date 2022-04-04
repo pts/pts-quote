@@ -43,26 +43,26 @@
 ;
 ; Limits:
 ;
-; * minimum quote size: 5 bytes (1 byte of text + CRLF + CRLF)
-; * maximum quote size: 4096 bytes including the trailing CRLF (longer than
+; * minimum quote size: 3 bytes (1 byte of text + LF + LF)
+; * maximum quote size: 4095 bytes including the trailing CRLF (longer than
 ;   a screen)
 ; * minimum number of quotes: 1  TODO: check at indexing time
 ; * maximum number of quotes: implicitly 0xf500 * 255 == 15 993 600
-; * minimum quote.txt file size: 5 bytes (1 quote)
-; * maximum quote.txt file size: 55 MiB == 55 << 20 bytes
+; * minimum quote.txt file size: 1 bytes (1 quote)
+; * maximum quote.txt file size: 61.25 MiB == 0xf5 << 18 bytes
 ; * quote.idx file size = 2 + ceil(number_of_quotes / 1024.0) bytes
 ; * minimum quote.idx file size: 2 + 1 == 3 bytes
-; * maximum quote.idx file size: 2 + (55 << 10) == 56322 bytes
+; * maximum quote.idx file size: 2 + (0xf5 << 10) == 62722 bytes
 ;
 ; Memory layout:
 ;
 ; * 0...0x80: PSP (Program Segment Prefix), populated by DOS.
 ; * 0x80...0x100: String containing command-line arguments, populated by DOS.
 ;   It starts with the 8-bit variable named `param'.
-; * 0x100... (at most 1272 bytes): .com file (code and data) loaded by DOS.
+; * 0x100... (at most 1276 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
-; * 0x5f8...0x9fc (1028 bytes): Variable named buffer, file preread buffer.
-;   When reading our quote, it continues and overlaps idxc and index.
+; * 0x5fc...0x9fc (1024 bytes): Variable named buffer, file preread buffer.
+;   When reading our quote, it continues and overlaps idxchw, idxc and index.
 ; * 0x9fc...0x9fe (2 bytes): Variable named idxchw, contains the high 16 bits
 ;   of total number of quotes.
 ; * 0x9fe...0xa00 (2 bytes): Variable named idxc, contains the low 16 bits
@@ -82,8 +82,8 @@ bits 16
 cpu 8086
 
 ;=======Size-measuring constants.
-	_bss equ 0x5f8
-	buflen equ 1024+4
+	_bss equ 0x5fc
+	buflen equ 1024
 	idxlen equ 0xf500  ; 61.25 KiB
 	quote_limit equ 4096  ; All quotes must be shorter than this. For compatibility with earlier versions.
 
@@ -157,44 +157,45 @@ r1:	lodsb
 	add idxc, ax
 	adc idxchw, byte 0
 	loop r1
-	jmp l5
+	jmp strict near l5
 
 ;=======Starts generating the index file quote.idx.
 gen:	pop bx				;Get handle of quote.txt.
-	mov si, offset_buffer
 	mov di, offset_index
-	mov bp, 0A0Dh
-	mov [si], bp
-	mov [si+2], bp
+	mov ah, 0			;Initial state. Can be 1 or 2 later.
 
-l2:	mov ah, 3Fh			;Read next 1024-byte block.
+l2:	push ax
+	mov ah, 3Fh			;Read next 1024-byte block.
 	mov cx, 1024
-	mov dx, offset_buffer+4
+	mov dx, offset_buffer
+	mov si, dx
 	int 21h
-	mov cx, ax
+	xchg cx, ax			;Clobbers AX. We don't care.
+	pop ax
 	jcxz l1
-	mov al, 0
+	mov dl, 0			;Number of quotes in this block.
 
-l4:	cmp [si], bp
-	jne strict short l3
-	cmp [si+2], bp
-	jne strict short l3
-	cmp byte[si+4], 13
-	je strict short l3		;Subsequent empty line is not a quote.
-	inc al				;Count the quote within the block.
+l4:	lodsb
+	cmp al, 13
+	je strict short l4next		;Skip over CR.
+	cmp al, 10
+	jne l4lt
+	cmp ah, 1
+	mov ah, 2			;State 1 --LF--> state 2.
+	je strict short l4next
+	mov ah, 0
+	jmp strict short l4next		;State 0,2 --LF--> state 0.
+l4lt:	cmp ah, 0			;State 0 --letter--> increment, state 1.
+	jne strict short l4c		;State 1,2 --letter--> state 1.
+l4q:	inc dl				;Count the quote within the block.
 	jnz l4b
 	call error			;Too many quotes start in an 1024-byte block.
 l4b:	add idxc, byte 1		;Count the quote as total.
 	adc idxchw, byte 0
-l3:	inc si
-	loop l4
-
+l4c:	mov ah, 1
+l4next:	loop l4
+	mov al, dl
 	stosb				;Add byte for current block to index.
-	lodsw
-	mov [offset_buffer], ax
-	lodsw
-	mov [offset_buffer+2], ax
-	mov si, offset_buffer
 	cmp di, offset_index+idxlen
 	jne strict short l2
 	push di				;Push error code. Error: quote.txt too long, index full.
@@ -292,7 +293,6 @@ l7b:	sub dx, ax
 ;=======Seeks to the block of our quote with index CX:DX.
 l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).
 	push dx				;Now: DX: quote index within the block.
-	mov bp, 0A0Dh
 	mov ax, 4200h
 	mov di, offset_buffer
 	jns strict short l8
@@ -301,29 +301,28 @@ l6:	sub si, offset_index+2		;Now: SI: block index (of size 1024).
 	int 21h
 	jnc strict short nc5
 	call error			;Error seeking to the beginning.
-nc5:	mov ax, bp
-	stosw				;Add sentinel CRLF+CRLF before the beginning.
-	stosw
+nc5:	mov ax, 0A0Ah
+	stosw				;Add sentinel LF+LF before the beginning, for state 1 --> state 0.
 	; 1023 is the maximum size of the previous quote in the current (first)
 	; block and (quote_limit-1) is the maximum size of our quote.
 	mov cx, 1023+(quote_limit-1)
 	jmp strict near l20
-l8:	; Set CX:DX to 1024 * SI + 1020.
+l8:	; Set CX:DX to 1024 * SI + 1021.
 	mov dx, si
 	mov cl, 10
 	rol dx, cl
 	mov cx, dx
 	and cx, ((1 << 10) - 1)
 	and dx, ((1 << 6) - 1) << 10
-	add dx, 1020
+	add dx, 1021
 	adc cx, byte 0
-	int 21h				;Seek to 1024 * SI + 1020, to the beginning of the previous block.
+	int 21h				;Seek to 1024 * SI + 1021, to the beginning of the previous block.
 	jnc strict short nc6
 	call error
-nc6:	; 4 is the size of the end of the  previous block, 1023 is the maximum size of
+nc6:	; 4 is the size of the end of the previous block, 1023 is the maximum size of
 	; the previous quote in the current block and (quote_limit-1) is the maximum
 	; size of our quote.
-	mov cx, 4+1023+(quote_limit-1)
+	mov cx, 3+1023+(quote_limit-1)
 
 ;=======Reads the blocks containing our quote.
 l20:	mov dx, di
@@ -333,10 +332,9 @@ l20:	mov dx, di
 	call error			;Error reading quote.
 nc7:	add ax, dx
 	xchg ax, di			;DI := AX and clobber AX, but shorter.
-	mov ax, bp
-	stosw				;Append sentinel CR,LF,CR,LF,14,CR,LF,CR,LF.
-	stosw
-	; Now append 14,CR,LF,CR,LF quote_index times (at most 1275 bytes), as a
+	mov ax, 0A0Ah
+	stosw				;Append sentinel LF+LF.
+	; Now append 11,LF,LF quote_index times (at most 765 bytes), as a
 	; final sentinel to stop processing even if the index file is buggy.
 	pop cx
 	push cx
@@ -351,19 +349,28 @@ l9:	inc ax
 lclose:	mov ah, 3Eh
 	int 21h				;Close .txt file.
 
-	pop ax				;Now: AX: quote index within the block.
-	mov di, offset_buffer-1		;buffer starts with the last 4 bytes of the previous block.
-l21:	inc di
-	cmp [di], bp
-	jne strict short l21
-	cmp [di+2], bp
-	jne strict short l21
-	cmp byte [di+4], 13
-	je strict short l21		;Ignore CRLF+CRLF followed by CR.
-l22:	dec ax
-	jns strict short l21
-	add di, byte 4			;DI:=offset(our_quote)
-	mov word [di+quote_limit-1], 0x0d0d  ;Forcibly truncate at 4095 bytes.
+	pop dx				;Now: DX: quote index within the block.
+	mov si, offset_buffer
+	mov ah, 1			;Initial state. Can be 0 or 2 later.
+
+p4:	lodsb
+	cmp al, 13
+	je strict short p4		;Skip over CR.
+	cmp al, 10
+	jne p4lt
+	cmp ah, 1
+	mov ah, 2			;State 1 --LF--> state 2.
+	je strict short p4
+	mov ah, 0
+	jmp strict short p4		;State 0,2 --LF--> state 0.
+p4lt:	cmp ah, 0			;State 0 --letter--> decrement, state 1.
+	mov ah, 1
+	jne strict short p4		;State 1,2 --letter--> state 1.
+	dec dx				;Count the quote within the block.
+	jns strict short p4
+	mov di, si
+	dec di				;DI:=offset(our_quote)
+	mov word [di+quote_limit-1], 0A0Ah  ;Forcibly truncate at 4095 bytes.
 
 ;=======Kiírjuk a kiválasztott idézetet
 	mov ax, 00EDAh			;Felső keret
@@ -371,14 +378,16 @@ l22:	dec ax
 	call pline
 
 lld:    mov cx, 79
-	mov al, 13			;CR
+	mov al, 10			;LF
 	lea si, [di-1]
-	repnz scasb			;Seek CR using DI.
+	repnz scasb			;Seek LF using DI.
 	jz strict short z5
 	call error			;Túl hosszú sor
-z5:	sub cx, byte 79
-	inc cx				;Replacing inc+neg by not wouldn't change ZF.
-	neg cx				;Most CX=sor hossza, CR nélkül
+z5:	sub cx, byte 78			;Now byte[di-1] == 10 (LF).
+	cmp byte [di-2], 13		;Compare against CRLF, we try to match CR.
+	jne strict short z5b
+	inc cx
+z5b:	neg cx				;Most CX=sor hossza, LF nélkül
 	jnz strict short y91
 
 lle:	mov ax, 00EC0h			;Üres sor=> Idézet vége, kilépés
@@ -390,10 +399,7 @@ lle:	mov ax, 00EC0h			;Üres sor=> Idézet vége, kilépés
 	call fillc
 	ret				;Exit with int 20h.
 
-y91:	cmp [di-1], bp			;Compare against CRLF, we try to match LF.
-	jne strict short y92
-	inc di				;Skip over LF.
-y92:	mov [si], cl			;Set length of Pascal string.
+y91:	mov [si], cl			;Set length of Pascal string.
 
 ;=======Prints the Pascal string starting at SI with the correct color & alignment
 ;       according to the control codes found at [SI] and [SI+1]. Keeps DI intact.

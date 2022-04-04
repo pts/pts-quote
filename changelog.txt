@@ -80,6 +80,8 @@ History of code written in 1996 and updated in 2022:
        TODO: add validator for quote.txt, at least display a different error
        TODO: better handle quotes longer than 4096 bytes
        TODO: add more error checking (especially for I/O and limits)
+       TODO: add quote.idx compatibility with version 2.64: keep idxc small
+             so that it's at most 65535 quotes in 55 << 10 blocks
 * 2.70 A DOS device driver (loadable from CONFIG.SYS) variant of 2.62,
        written on 1997-03-22. It contains a text font, and sets up a splash
        screen for booting.
