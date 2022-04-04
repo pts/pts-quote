@@ -382,7 +382,7 @@ lld:    mov cx, 79
 	lea si, [di-1]
 	repnz scasb			;Seek LF using DI.
 	jz strict short z5
-	call error			;Túl hosszú sor
+	call error			;Line too long.
 z5:	sub cx, byte 78			;Now byte[di-1] == 10 (LF).
 	cmp byte [di-2], 13		;Compare against CRLF, we try to match CR.
 	jne strict short z5b

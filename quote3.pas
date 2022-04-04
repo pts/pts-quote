@@ -408,7 +408,7 @@ lld:    { seek(f, qqq.l); }
         je @11
 	inc bx
         jmp @12
-@13:    jmp llf { Hiba: 255 karakternél hosszabb sor }
+@13:    jmp llf { Error: Line longer than 255 bytes. }
 @11:    mov byte ptr s, bl { Beállítjuk a string hosszát }
         inc bx
         inc bx
