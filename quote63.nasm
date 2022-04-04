@@ -46,8 +46,8 @@
 ; * minimum quote size: 5 bytes (1 byte of text + CRLF + CRLF)
 ; * maximum quote size: 4096 bytes including the trailing CRLF (longer than
 ;   a screen)
-; * minimum number of quotes: 1  !! check at indexing time
-; * maximum number of quotes: 65535  !! check at indexing time
+; * minimum number of quotes: 1  TODO: check at indexing time
+; * maximum number of quotes: implicitly 0xf500 * 255 == 15 993 600
 ; * minimum quote.txt file size: 5 bytes (1 quote)
 ; * maximum quote.txt file size: 55 MiB == 55 << 20 bytes
 ; * quote.idx file size = 2 + ceil(number_of_quotes / 1024.0) bytes
@@ -377,7 +377,7 @@ lld:    mov cx, 79
 	jz strict short z5
 	call error			;Túl hosszú sor
 z5:	sub cx, byte 79
-	inc cx				;NOT nem állítja a flageket!!!
+	inc cx				;Replacing inc+neg by not wouldn't change ZF.
 	neg cx				;Most CX=sor hossza, CR nélkül
 	jnz strict short y91
 

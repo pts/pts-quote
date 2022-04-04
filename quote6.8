@@ -5,10 +5,6 @@
 ;
 ; Compile it with A86 3.22 .. 4.05 on DOS, generate quote6.com: a86 quote6.8
 ;
-; !! TODO: 8086 support (quotex.nasm)
-; !! TODO: report error if empty or more than 65535 quotes
-; !! TODO: Linux i386 version with ANSI codes for linux and xterm terminals
-;
 ;I read from QUOTE.TXT, and I read/write/keep QUOTE.IDX in the current dir.
 ;
 ;If you do not specify the command line parameter, first I check for .idx If
@@ -34,13 +30,13 @@
 ;My error codes are not documentated, however, I give back the same errorlevel
 ;for the same error. Now the errors may be file i/o and line-too-long.
 ;
-; Limits:
+; Limits (all unchecked):
 ;
 ; * minimum quote size: 5 bytes (1 byte of text + CRLF + CRLF)
 ; * maximum quote size: 4096 bytes including the trailing CRLF (longer than
 ;   a screen)
-; * minimum number of quotes: 1  !! check at indexing time
-; * maximum number of quotes: 65535  !! check at indexing time
+; * minimum number of quotes: 1
+; * maximum number of quotes: 65535
 ; * minimum quote.txt file size: 5 bytes (1 quote)
 ; * maximum quote.txt file size: 55 MiB == 55 << 20 bytes
 ; * quote.idx file size = 2 + ceil(number_of_quotes / 1024.0) bytes
@@ -250,6 +246,8 @@ l8:	mov dx, si
 ;=======Reads the blocks containing our quote.
 l20:	mov ah, 3Fh
 	mov cx, quote_max		;Ennyi tuti, hogy elég lesz.
+	; Bug: this trailing CRLF + CRLF (bp + bp) should be put after
+	; read read_size (in ax above), not after quote_max bytes.
 	mov buffer[quote_max], bp	;Biztos, ami biztos, idézet vége
 	mov buffer[quote_max+2], bp	;jelet teszünk a buffer végére.
 	int 21h				;Olvasás
@@ -278,7 +276,7 @@ lld:    mov cx, 79
 	repnz scasb			;Seek CR
 	if nz call error		;Túl hosszú sor
 	sub cx, 79
-	inc cx				;NOT nem állítja a flageket!!!
+	inc cx				;Replacing inc+neg by not wouldn't change ZF.
 	neg cx				;Most CX=sor hossza, CR nélkül
 	jnz y91
 
