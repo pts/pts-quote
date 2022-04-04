@@ -135,7 +135,7 @@ procedure PrintLine(w: word); assembler;
 	int 29h
 end;
 
-label llc,lld,lle,llf,lls,after_random;
+label llc,lld,lle,llf,lls,after_random,fatal_error;
 
 begin { Főprogram }
   asm { This statement is going to be long. Very long. }
@@ -189,7 +189,7 @@ begin { Főprogram }
 	mov ax, 3D00h { Open for Read Only, C-Mode }
 	mov dx, offset txtfn
 	int 21h
-	{ BUG: Fail. }
+	jc fatal_error
 	mov qqq.han, ax
 
 	{  qqq.max:=filesize(f); }
@@ -276,6 +276,7 @@ begin { Főprogram }
         mov dx, offset idxfn
 	int 21h
 	jnc @91
+fatal_error:
         mov ax, 4CF0h
 	int 21h { Fatal error }
 @91:    { blockwrite(f, buf, compressed_size); }
@@ -295,7 +296,7 @@ lls:    { XReset(IDXFN); }
 	mov ax, 3D00h { Open for Read Only, C-Mode }
 	mov dx, offset idxfn
 	int 21h
-	{ BUG: Fail. }
+	jc fatal_error
 	mov qqq.han, ax
 	{ blockread(f, buf, full+4, reg_ax); }
 	mov ah, 3Fh
@@ -334,7 +335,7 @@ llc:    cmp qqq.xch, 'C'
 	mov ax, 3D00h { Open for Read Only, C-Mode }
 	mov dx, offset txtfn
 	int 21h
-	{ BUG: Fail. }
+	jc fatal_error
 	mov qqq.han, ax
 	{ Now qqq.a-1 is the number of quotes in txtfn, provided that txtfn ends with CRLF + CRLF. }
 	xor ax, ax
@@ -419,7 +420,7 @@ lld:    { seek(f, qqq.l); }
         je @11
 	inc bx
         jmp @12
-@13:    jmp llf { Hiba: 255 karakternél hosszabb sor }
+@13:    jmp fatal_error { Error: Line longer than 255 bytes. }
 @11:    mov byte ptr s, bl { Beállítjuk a string hosszát }
         inc bx
         inc bx

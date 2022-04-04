@@ -107,7 +107,9 @@ mov ax, 0x3d00  ; Open for Read Only, C-Mode
 mov dx, txtfn
 int 0x21
 mov [qqq_han], ax
-;jc strict near fatal_error  ; BUG: Fail.
+jnc strict short lx_16d_nc
+jmp strict near fatal_error
+lx_16d_nc:
 ; qqq_max:=filesize(f);
 mov ax, 0x4202
 mov bx, [qqq_han]
@@ -217,7 +219,7 @@ mov ax, 0x3d00  ; Open for Read Only, C-Mode
 mov dx, idxfn
 int 0x21
 mov [qqq_han], ax
-;jc strict near fatal_error  ; BUG: Fail.
+jc strict short fatal_error
 ; blockread(f, buf, full+4, reg_ax);
 mov ah, 0x3f
 mov bx, [qqq_han]
@@ -254,14 +256,14 @@ mov [qqq_a], dx  ; qqq.a := (number of quotes) + 1.
 llc:
 cmp byte [qqq_xch], 'C'
 jne strict short lx_2d1
-jmp strict near lx_46d
+jmp strict near exit
 lx_2d1:
 ; XReset(TXTFN);
 mov ax, 0x3d00  ; Open for Read Only, C-Mode
 mov dx, txtfn
 int 0x21
 mov [qqq_han], ax
-;jc strict near fatal_error  ; BUG: Fail.
+jc strict short fatal_error
 ; Now qqq_a-1 is the number of quotes in txtfn, provided that txtfn ends with CRLF + CRLF.
 xor ax, ax
 mov [qqq_l], ax  ; L kezdőoffszet kiszámolása
@@ -347,7 +349,7 @@ je strict short lx_37b
 inc bx
 jmp strict short lx_36c
 lx_378:
-jmp strict near lx_46d  ; Hiba: 255 karakternél hosszabb sor
+jmp strict near fatal_error  ; Error: Line longer than 255 bytes.
 lx_37b:
 ; Beállítjuk a string hosszát
 dw 0x1e88, var_s  ; mov byte [var_s], bl  ; Workaround to prevent bug in yasm-1.2.0 and yasm-1.3.0: INTERNAL ERROR at modules/arch/x86/x86expr.c, line 417: unexpected expr op
@@ -468,7 +470,7 @@ call func_Header
 mov ah, 0x3e  ; Close(F);
 mov bx, [qqq_han]
 int 0x21
-lx_46d:
+exit:
 mov ax, 0x4c00  ; EXIT_SUCCESS.
 int 0x21  ; Exit to DOS.
 

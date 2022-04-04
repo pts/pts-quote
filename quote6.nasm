@@ -403,7 +403,7 @@ lld:    mov cx, 79
 	lea si, [di-1]
 	repnz scasb			;Seek CR
 	jz strict short z5
-	call error			;Túl hosszú sor
+	call error			;Line too long.
 z5:	sub cx, byte 79
 	inc cx				;Replacing inc+neg by not wouldn't change ZF.
 	neg cx				;Most CX=sor hossza, CR nélkül
