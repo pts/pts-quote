@@ -7,10 +7,8 @@ Compile it with Turbo Pascal 7.0 on DOS, generate quote3.exe: tpc quote3.pas
 
 This program (quote3.exe) is buggy in both DOSBox
 and QEMU, it usually hangs after printing the header correctly.
-It is because of the slow random number generator.
-
-Is this bug still present? !! This program prints garbage after the last
-quote (could not be reproduced).
+It is because of the slow random number generator. It also has some other
+serious bugs, see BUG in the source code.
 
 The QUOTE.IDX index file format is identical in version 2.30 .. 2.5? and
 different from version 2.60.
@@ -53,7 +51,7 @@ function GetNext: char; assembler;
 	cmp qqq.b, full+4                 { if qqq.b=full+4 then begin }
 	jne @88
 
-	{ This code is completely buggy. It should be:
+	{ BUG: This code is completely buggy. It should be:
 	  mov si, offset buf + full
 	  mov di, offset buf
 	  movsw
@@ -72,7 +70,7 @@ function GetNext: char; assembler;
 	mov cx, full
 	mov dx, offset buf+4
 	int 21h
-	jnz @87  { Bug: should be jnc. }
+	jnz @87  { BUG: should be jnc. }
 	mov ax, 4CF1h  { Abort on read error. }
 	int 21h
 @87:    mov qqq.b, 4                      { endif }
@@ -161,7 +159,7 @@ begin { Főprogram }
 	int 29h
 	push ds				{ Header ki }
 	push offset headermsg
-	call Header
+	call Header { BUG: This should be called after the ANSI.SYS detection below }
 
 	xor ax, ax { ansi:=memw[0:$29*4+2]>memw[0:$20*4+2]; }
 	mov es, ax
@@ -197,7 +195,7 @@ begin { Főprogram }
 	mov dx, offset txtfn
 	int 21h
 	mov qqq.han, ax
-	sbb ax, ax { AX:=0, ha OK; AX:=$FFFF, ha hiba }
+	sbb ax, ax { BUG: Fail. }
 
 	{  qqq.max:=filesize(f); }
 	mov ax, 4202h
@@ -303,7 +301,8 @@ lls:    { XReset(IDXFN); }
 	mov dx, offset idxfn
 	int 21h
 	mov qqq.han, ax
-	sbb ax, ax { AX:=0, ha OK; AX:=$FFFF, ha hiba }
+	sbb ax, ax { BUG: Fail. }
+	{ BUG: To avoid buffer overflow, read just full+4 instead of $FFFF }
 	{ blockread(f, buf, $FFFF, qqq.a); }
 	mov ah, 3Fh
 	mov bx, qqq.han
@@ -345,7 +344,7 @@ llc:    cmp qqq.xch, 'C'
 	mov dx, offset txtfn
 	int 21h
 	mov qqq.han, ax
-	sbb ax, ax { AX:=0, ha OK; AX:=$FFFF, ha hiba }
+	sbb ax, ax { BUG: Fail. }
 
 	{ qqq.w:=random(qqq.a+1); }
 	push es
@@ -361,7 +360,7 @@ llc:    cmp qqq.xch, 'C'
         add ax, $BE0
         loop @99
         cmp ax, qqq.a
-	ja @98
+	ja @98				      { BUG: This makes the random generator very slow. }
 	mov qqq.w, ax
 	pop es
 

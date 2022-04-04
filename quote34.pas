@@ -5,9 +5,6 @@ quote34.pas: PotterSoftware Quote Displayer V2.34 (Turbo Pascal 7.0 inline assem
 
 Compile it with Turbo Pascal 7.0 on DOS, generate quote34.exe: tpc quote34.pas
 
-Is this bug still present? !! This program prints garbage after the last
-quote (could not be reproduced).
-
 The QUOTE.IDX index file format is identical in version 2.30 .. 2.5? and
 different from version 2.60.
 
@@ -34,7 +31,7 @@ const
 var
   buf: array[0..full+4-1] of char;
   s: string absolute buf;
-  idx: array[0..24160] of word;  { !! idx[0] is always 0. Get rid of it. }
+  idx: array[0..24160] of word;  { TODO: idx[0] is always 0. Get rid of it. }
   qqq: record
     a,b,w: word;
     l, max, oldl: longint;
@@ -188,6 +185,7 @@ begin { Főprogram }
 	mov ax, 3D00h { Open for Read Only, C-Mode }
 	mov dx, offset txtfn
 	int 21h
+	{ BUG: Fail. }
 	mov qqq.han, ax
 
 	{  qqq.max:=filesize(f); }
@@ -293,10 +291,12 @@ lls:    { XReset(IDXFN); }
 	mov ax, 3D00h { Open for Read Only, C-Mode }
 	mov dx, offset idxfn
 	int 21h
+	{ BUG: Fail. }
 	mov qqq.han, ax
 	{ blockread(f, buf, $FFFF, reg_ax); }
 	mov ah, 3Fh
 	mov bx, qqq.han
+	{ BUG: To avoid buffer overflow, read just full+4 instead of $FFFF. }
 	mov cx, $FFFF
         mov dx, offset buf
         int 21h
@@ -331,6 +331,7 @@ llc:    cmp qqq.xch, 'C'
 	mov ax, 3D00h { Open for Read Only, C-Mode }
 	mov dx, offset txtfn
 	int 21h
+	{ BUG: Fail. }
 	mov qqq.han, ax
 	{ Now qqq.a-1 is the number of quotes in txtfn, provided that txtfn ends with CRLF + CRLF. }
 	xor ax, ax
