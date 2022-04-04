@@ -153,11 +153,12 @@ nc8:	sub ax, byte 2
 	xor ax, ax
 	mov idxc, ax			;Clear it after read above.
 	mov si, offset_index
+	jcxz r2
 r1:	lodsb
 	add idxc, ax
 	adc idxchw, byte 0
 	loop r1
-	jmp strict near l5
+r2:	jmp strict near l5
 
 ;=======Starts generating the index file quote.idx.
 gen:	pop bx				;Get handle of quote.txt.
@@ -229,7 +230,11 @@ l19:	cmp param, 2
 ne4:
 
 ;=======Continues after quote.idx has been read or generated.
-l5:	push bx				;Save handle of quote.txt.
+l5:	mov ax, [offset_idxc]
+	or ax, [offset_idxchw]
+	jnz strict short l5p
+	call error			;No quotes in quote.txt.
+l5p:	push bx				;Save handle of quote.txt.
 
 ;=======Generates 32-bit random seed in SI:DI. Clobbers flags, AX, BX, CX.
 	mov ah, 0			;Read system clock counter to CX:DX.
