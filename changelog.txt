@@ -37,11 +37,12 @@ History of code written in 1996 and updated in 2022:
 * 2.41 Turbo Pascal 7.0 inline assembly ported to NASM 0.98.39 assembly
        on 2022-03-27. Random number generation is very slow.
        quote4.nasm is NASM 0.98.39 source code.
-       quote4n.com.orig and quote4.com.orig are 1220 bytes, built on 2022-03-27.
+       quote4n.com.orig and quote4.com.orig are 1251 bytes, first built on
+       2022-03-27.
 * 2.42 From 2.41 random number generator replaced with a faster one.
        Released on 2022-03-27.
        quote42.nasm is NASM 0.98.39 source code.
-       quote42n.com.orig is ~1226 bytes, built on 2022-03-27.
+       quote42n.com.orig is ~1235 bytes, first built on 2022-03-27.
 * 2.50 ANSI.SYS is no longer needed for color display.
        Released in PotterSoftware Entry Pack. Random number generation is
        very slow.
@@ -52,7 +53,7 @@ History of code written in 1996 and updated in 2022:
 * 2.52 From 2.50 random number generator replaced with a faster one.
        Released on 2022-03-27.
        quote52.8 is A86 3.22 source code, most of it reverse engineered.
-       quote52.com.orig is ~1208 bytes.
+       quote52.com.orig is ~1192 bytes, first built on 2022-03-27.
 * 2.60 QUOTE.IDX index file format redesigned, file is much smaller:
        just 8% of before, just 0.976% of QUOTE.TXT.
        Source code and .com program binary have been lost.

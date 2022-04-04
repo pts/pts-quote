@@ -42,7 +42,25 @@ bits 16
 cpu 286
 org 0x100
 
+_code:
 _start:  ; begin { Főprogram }
+
+; Increase DS and SS to accommodate for the total memory usage of 68 KiB (67
+; KiB for code and data + 1 KiB for stack).
+mov ah, 0x4a  ; https://stanislavs.org/helppc/int_21-4a.html
+mov bx, 0x1100  ; Number of bytes needed == 0x1100 * 16, that's 68 KiB.
+int 0x21
+jnc strict short resize_ok
+jmp strict near fatal_error
+resize_ok:
+mov ax, ds
+add ax, seg_delta
+mov ds, ax
+mov es, ax  ; es will remain this way for most of the rest of the run.
+mov ax, ss
+add ax, 0x100  ; 1 KiB of stack at the end of the 68 KiB.
+mov ss, ax
+
 mov al, 0xd  ; Writeln
 int 0x29
 mov al, 0xa
@@ -76,9 +94,6 @@ mov al, ' '
 lx_146:
 and al, 255-32
 mov [qqq_xch], al
-; es will remain this way for the rest of the run.
-push ds
-pop es
 ; XReset(IdxFn);
 mov ax, 0x3d00  ; Open for Read Only, C-Mode
 mov dx, idxfn
@@ -163,8 +178,6 @@ lx_222:
 mov cx, [qqq_a]
 dec cx
 mov si, idx+2
-mov ax, ds
-mov es, ax
 mov di, buf
 xor dx, dx
 lx_233:
@@ -186,6 +199,7 @@ mov cx, 0x0
 mov dx, idxfn
 int 0x21
 jnc strict short lx_25f
+fatal_error:
 mov ax, 0x4cf0  ; Fatal error
 int 0x21
 lx_25f:
@@ -224,8 +238,6 @@ int 0x21
 mov dx, 0x1
 mov si, buf
 mov di, idx+2
-mov ax, ds
-mov es, ax
 lx_2af:
 lodsb
 mov ah, 0x0
@@ -461,7 +473,8 @@ mov ah, 0x3e  ; Close(F);
 mov bx, [qqq_han]
 int 0x21
 lx_46d:
-ret  ; Exit to DOS.
+mov ax, 0x4c00  ; EXIT_SUCCESS.
+int 0x21  ; Exit to DOS.
 
 ; function GetNext: char; assembler;
 func_GetNext:
@@ -580,20 +593,28 @@ int 0x29
 leave
 ret 0x2
 
+times ((_code-$) & 15) nop  ; Align to paragraph (16) boundary with nop.
+seg_delta equ (($-_code) >> 4) + 0x10
+
 _data:
-ttt: db 27, '[44;30m$', 27, '[0m', 27, '[K$', 27, '[30;1m$', 27, '[0m$'
-txtfn: db 'QUOTE.TXT', 0
-idxfn: db 'QUOTE.IDX', 0
+ttt_in_data: db 27, '[44;30m$', 27, '[0m', 27, '[K$', 27, '[30;1m$', 27, '[0m$'
+ttt equ ttt_in_data-_data  ; Because of seg_delta.
+txtfn_in_data: db 'QUOTE.TXT', 0
+txtfn equ txtfn_in_data-_data  ; Because of seg_delta.
+idxfn_in_data: db 'QUOTE.IDX', 0
+idxfn equ idxfn_in_data-_data  ; Because of seg_delta.
 ; Must be long enough (23 bytes) for overlap with qqq_... .
-headermsg: db 34, 'PotterSoftware Quote Displayer 2.4'
-footermsg: db 44, 'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
+headermsg_in_data: db 35, 'PotterSoftware Quote Displayer 2.42'
+headermsg equ headermsg_in_data-_data  ; Because of seg_delta.
+footermsg_in_data: db 44, 'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
+footermsg equ footermsg_in_data-_data  ; Because of seg_delta.
 _data_end:
 
 ; _bss: (Uninitialized data.)
 full equ 16384  ; Just a size.
-buf equ _data_end+((_data_end-$$)&1)  ; array[0..full+4-1] of char;  Aligned.
+buf equ _data_end+((_data_end-$$)&1)-_data  ; array[0..full+4] of char;  Aligned.
 var_s equ buf  ; string; overlaps buf
-idx equ buf+full+4+((buf+full+4-$$)&1)  ; array[0..24160] of word;  ; Aligned.
+idx equ buf+full+4+((buf+_data+full+4-$$)&1)  ; array[0..24160] of word;  ; Aligned.
 qqq_a equ headermsg  ; word; overlaps headermsg.
 qqq_b equ qqq_a+2  ; word; overlaps headermsg.
 qqq_w equ qqq_b+2  ; word; overlaps headermsg.

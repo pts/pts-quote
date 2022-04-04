@@ -42,13 +42,23 @@ offset_var_s= offset_buf
 
 _code:
 _start:
+
+; Increase DS and SS to accommodate for the total memory usage of 68 KiB (67
+; KiB for code and data + 1 KiB for stack).
+mov ah, 4Ah  ; https://stanislavs.org/helppc/int_21-4a.html
+mov bx, 1100h  ; Number of bytes needed == 1100h * 16, that's 68 KiB.
+int 21h
+jnc resize_ok
+jmp_near fatal_error
+resize_ok:
 mov ax,ds  ; @0x100  8CD8
 add ax,seg_delta  ; @  055400
 mov ds,ax  ; @  8ED8
 mov es,ax  ; es will remain this way for the rest of the run.
 mov ax,ss  ; @  8CD0
-add ax,0100h  ; @  050001
-mov ss,ax  ; @  8ED0  ; !! Why modify ss? Do we need extra stack space?
+add ax,0100h  ; @  050001  ; 1 KiB of stack at the end of the 68 KiB.
+mov ss,ax  ; @  8ED0
+
 mov bh,00h  ; @  B700
 mov ax,0E0Dh  ; @  B80D0E
 int 010h  ; @  CD10
@@ -175,6 +185,7 @@ jnc lx_252  ; @  7303
 jmp_near lx_462  ; @  E91002
 lx_252:
 jnc lx_259  ; @  7305
+fatal_error:
 mov ax,04CF0h  ; @  B8F04C
 int 021h  ; @  CD21
 lx_259:
@@ -431,8 +442,8 @@ int 021h  ; @  CD21
 mov bx,07h  ; @  BB0700
 call lx_523  ; @  E8C100
 lx_462:
-mov ah,04Ch  ; @  B44C
-int 021h  ; @  CD21
+mov ax,04C00h
+int 021h  ; @0x0464  CD21  ; Exit to DOS.
 
 ; May ruin SI and possibly other registers.
 func_GetNext:
