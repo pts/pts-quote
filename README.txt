@@ -55,11 +55,10 @@ How to compile and build:
 
 File format of the text file quote.txt as of version 2.63:
 
-* Each line except possibly the last one must be terminated with a CRLF
-  (\r\n, ASCII 10 + 13).
-* Quotes are separated by one or more empty lines (i.e. CRLF + CRLF,
-  CRLF + CRLF + CRLF or longer). It's OK to omit this at the end of file.
-* Each quote must fit to 4095 bytes (including the trailing CRLF + CRLF).
+* Quotes are separated by one or more empty lines.
+* Lines are separated by LF or CRLF (can be mixed). At the end of the
+  file there may be 0 or more LF or CRLF.
+* Each quote must fit to 4095 bytes (including the trailing empty line).
 * If a line starts with --, it will be right-aligned without the -- ,
   and it will be highlighted.
 * If a line starts with -&, it will be center-aligned without the -& ,
@@ -67,9 +66,12 @@ File format of the text file quote.txt as of version 2.63:
 * Otherwise lines must not start with - .
 * The file quote.txt must be at most 61.25 MiB in size.
 * The file quote.txt must contain at least 1 quote.
-* There is no upper limit on the number of quotes in quote.txt, but because
-  of the size limit it's at most 12 845 056 quotes: 5 bytes each for 61.25
-  MiB.
+* Each 1024-byte block of quote.txt must contain at most 255 quotes. That
+  can be ensured by making each quote at least 5 bytes long (including the
+  trailing empty line).
+* The maximum number of quotes in quote.txt is 15 993 600. This is because
+  quote.idx can describe up to 62720 1024-byte blocks, with up to 255 quotes
+  each.
 * There is no validator. The program will misbehave for nonconforming
   quote.txt files.
 
