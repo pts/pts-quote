@@ -392,7 +392,7 @@ mov bh,00h  ; @0x03ED  B700
 int 010h  ; @0x03EF  CD10
 mov bx,cx  ; @0x03F1  8BD9
 mov cx,04Eh  ; @0x03F3  B94E00
-call lx_526  ; @0x03F6  E82D01
+call func_Print_spaces  ; @0x03F6  E82D01
 push ds  ; @0x03F9  1E
 mov si,qqq_w  ; @0x03FA  8B361C00
 lodsb  ; @0x03FE  AC
@@ -446,7 +446,7 @@ mov ah,03Eh  ; @0x0454  B43E
 mov bx,[02Eh]  ; @0x0456  8B1E2E00
 int 021h  ; @0x045A  CD21
 mov bx,07h  ; @0x045C  BB0700
-call lx_523  ; @0x045F  E8C100
+call func_Print_80_spaces  ; @0x045F  E8C100
 exit:
 mov ah,04Ch  ; @0x0462  B44C
 int 021h  ; @0x0464  CD21  ; Exit to DOS, with arbitrary exit code. BUG: should be EXIT_SUCCESS (0).
@@ -489,10 +489,10 @@ func_Header:
 push bp  ; @0x04AE  55
 mov bp,sp  ; @0x04AF  89E5
 mov bx,010h  ; @0x04B1  BB1000
-call lx_523  ; @0x04B4  E86C00
+call func_Print_80_spaces  ; @0x04B4  E86C00
 mov ax,0EB2h  ; @0x04B7  B8B20E
 mov byte [cs:ploop2],048h  ; @0x04BA  2EC606390548  ; 48h: DEC AX
-call lx_52c  ; @0x04C0  E86900
+call func_Print_header_side  ; @0x04C0  E86900
 mov si,[bp+04h]  ; @0x04C3  8B7604
 lodsb  ; @0x04C6  AC
 mov ah,00h  ; @0x04C7  B400
@@ -525,9 +525,9 @@ loop lx_4f4  ; @0x04F6  E2FC
 lx_4f8:
 mov al,0B0h  ; @0x04F8  B0B0
 mov byte [cs:ploop2],040h  ; @0x04FA  2EC606390540  ; 40h: INC AX
-call lx_52c  ; @0x0500  E82900
+call func_Print_header_side  ; @0x0500  E82900
 mov bx,07h  ; @0x0503  BB0700
-call lx_523  ; @0x0506  E81A00
+call func_Print_80_spaces  ; @0x0506  E81A00
 pop bp  ; @0x0509  5D
 ret 02h  ; @0x050A  C20200
 
@@ -544,13 +544,15 @@ loop lx_51a  ; @0x051C  E2FC
 mov al,dh  ; @0x051E  8AC6
 int 010h  ; @0x0520  CD10
 ret  ; @0x0522  C3
-lx_523:
-mov cx,050h  ; @0x0523  B95000
-lx_526:
+
+func_Print_80_spaces:  ; Prints 80 spaces with attributes in BX.
+mov cx, 80  ; @0x0523  B95000
+func_Print_spaces:  ; Prints CX spaces with attributes in BX.
 mov ax,0920h  ; @0x0526  B82009
 int 010h  ; @0x0529  CD10
 ret  ; @0x052B  C3
-lx_52c:
+
+func_Print_header_side:  ; Prints the left or right side of the header.
 mov cx,03h  ; @0x052C  B90300
 lx_52f:
 int 010h  ; @0x052F  CD10

@@ -393,8 +393,9 @@ mov bh,00h  ; @  B700
 int 010h  ; @  CD10
 mov bx,cx  ; @  8BD9
 mov cx,04Eh  ; @  B94E00
-call lx_526  ; @  E82D01
+call func_Print_spaces  ; @  E82D01
 
+; Display the string "s" with "before" spaces in front of it.
 mov si,qqq_w  ; @  8B361C00
 lodsb  ; @  AC
 mov cl,al  ; @  88C1
@@ -446,7 +447,7 @@ mov ah,03Eh  ; @  B43E
 mov bx,[02Eh]  ; @  8B1E2E00
 int 021h  ; @  CD21
 mov bx,07h  ; @  BB0700
-call lx_523  ; @  E8C100
+call func_Print_80_spaces  ; @  E8C100
 exit:
 mov ax,04C00h
 int 021h  ; @0x0464  CD21  ; Exit to DOS, with EXIT_SUCCESS (0).
@@ -482,10 +483,10 @@ func_Header:
 push bp  ; @  55
 mov bp,sp  ; @  89E5
 mov bx,010h  ; @  BB1000
-call lx_523  ; @  E86C00
+call func_Print_80_spaces  ; @  E86C00
 mov ax,0EB2h  ; @  B8B20E
 mov byte [cs:ploop2],048h  ; @  2EC606390548  ; 48h: DEC AX
-call lx_52c  ; @  E86900
+call func_Print_header_side  ; @  E86900
 mov si,[bp+04h]  ; @  8B7604
 lodsb  ; @  AC
 mov ah,00h  ; @  B400
@@ -518,9 +519,9 @@ loop lx_4f4  ; @  E2FC
 lx_4f8:
 mov al,0B0h  ; @  B0B0
 mov byte [cs:ploop2],040h  ; @  2EC606390540  ; 40h: INC AX
-call lx_52c  ; @  E82900
+call func_Print_header_side  ; @  E82900
 mov bx,07h  ; @  BB0700
-call lx_523  ; @  E81A00
+call func_Print_80_spaces  ; @  E81A00
 pop bp  ; @  5D
 ret 02h  ; @  C20200
 
@@ -537,13 +538,15 @@ loop lx_51a  ; @  E2FC
 mov al,dh  ; @  8AC6
 int 010h  ; @  CD10
 ret  ; @  C3
-lx_523:
+
+func_Print_80_spaces:  ; Print 80 spaces with attributes in BX.
 mov cx,050h  ; @  B95000
-lx_526:
+func_Print_spaces:  ; Print CX spaces with attributes in BX.
 mov ax,0920h  ; @  B82009
 int 010h  ; @  CD10
 ret  ; @  C3
-lx_52c:
+
+func_Print_header_side:  ; Prints the left or right side of the header.
 mov cx,03h  ; @  B90300
 lx_52f:
 int 010h  ; @  CD10
