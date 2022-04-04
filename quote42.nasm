@@ -12,12 +12,7 @@
 ;
 ;   $ yasm -O0 -f bin -o quote42n.com quote42.nasm
 ;
-; Is this bug still present? !! This program prints garbage after the last
-; quote (could not be reproduced), assuming CRLF + CRLF file ending.
-;
-; This is version 2.42. It is functionally equivalent to version 2.33, but it's
-; implemented in NASM (rather than Turbo Pascal 7.0 inline assembly). The original
-; source code for version 2.40 was implemented in A86, but that has been lost.
+; This is version 2.42, which is version 2.41 with some critical bugfixes.
 ;
 ; The QUOTE.IDX index file format is identical in version 2.30 .. 2.5? and
 ; different from version 2.60.
@@ -112,7 +107,7 @@ mov ax, 0x3d00  ; Open for Read Only, C-Mode
 mov dx, txtfn
 int 0x21
 mov [qqq_han], ax
-;sbb ax, ax  ; AX:=0, ha OK ; AX:=$FFFF, ha hiba  ; !! Fail on I/O error.
+;jc strict near fatal_error  ; BUG: Fail.
 ; qqq_max:=filesize(f);
 mov ax, 0x4202
 mov bx, [qqq_han]
@@ -222,11 +217,11 @@ mov ax, 0x3d00  ; Open for Read Only, C-Mode
 mov dx, idxfn
 int 0x21
 mov [qqq_han], ax
-;sbb ax, ax  ; AX:=0, ha OK ; AX:=$FFFF, ha hiba  ; !! Fail on I/O error.
+;jc strict near fatal_error  ; BUG: Fail.
 ; blockread(f, buf, $FFFF, reg_ax);
 mov ah, 0x3f
 mov bx, [qqq_han]
-mov cx, 0xffff  ; !! Lower this to proect stack etc. against buffer overflow.
+mov cx, 0xffff  ; BUG: To avoid buffer overflow, read just full+4 instead of $FFFF.
 mov dx, buf
 int 0x21
 mov cx, ax  ; Save number of (compressed) bytes read to cx, for below.
@@ -255,6 +250,7 @@ lx_2c0:
 inc dx
 loop lx_2af
 mov [qqq_a], dx  ; qqq.a := (number of quotes) + 1.
+
 llc:
 cmp byte [qqq_xch], 'C'
 jne strict short lx_2d1
@@ -265,7 +261,7 @@ mov ax, 0x3d00  ; Open for Read Only, C-Mode
 mov dx, txtfn
 int 0x21
 mov [qqq_han], ax
-;sbb ax, ax  ; AX:=0, ha OK ; AX:=$FFFF, ha hiba  ; !! Fail on I/O error.
+;jc strict near fatal_error  ; BUG: Fail.
 ; Now qqq_a-1 is the number of quotes in txtfn, provided that txtfn ends with CRLF + CRLF.
 xor ax, ax
 mov [qqq_l], ax  ; L kezdőoffszet kiszámolása
