@@ -22,8 +22,8 @@
 ; make it work as a DOS .com program, and it is also based on the source
 ; code quote3.pas (mostly for comments).
 ;
-; It uses ANSI.SYS for color output, and it detects the lack of ANSI.SYS (such as
-; in DOSBox), and then it prints colorless output.
+; It uses ANSI.SYS for color output, and it detects the lack of ANSI.SYS
+; (such as in DOSBox), and then it prints colorless output.
 ;
 ; Command-line argument (first byte on the command-line):
 ;
