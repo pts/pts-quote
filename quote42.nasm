@@ -48,7 +48,7 @@ _start:  ; begin { Főprogram }
 	jmp strict near fatal_error
 resize_ok:
 	mov ax, ds
-	add ax, seg_delta
+	add ax, strict word seg_delta
 	mov ds, ax
 	mov es, ax  ; es will remain this way for most of the rest of the run.
 	mov ax, ss
