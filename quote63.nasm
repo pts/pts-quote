@@ -143,6 +143,7 @@ _start:
 	xor bx, bx
 	mov idxc, bx
 	mov idxchw, bx
+	mov bp, errorlevel		;Keep it cached to reduce code size below.
 
 	cmp param, 2
 	je strict short l18
@@ -193,7 +194,7 @@ r1:	lodsb
 r2:	jmp strict near l5
 
 ;=======Starts generating the index file quote.idx.
-gen:	mov byte [errorlevel], 'G'
+gen:	mov byte [bp], 'G'
 	pop bx				;Restore .txt filehandle.
 	mov di, offset_index
 	mov ah, 0			;Initial state. Can be 1 or 2 later.
@@ -203,7 +204,7 @@ l2:	push ax
 	mov cx, 1024
 	mov dx, offset_buffer
 	mov si, dx
-	dec byte [errorlevel]
+	dec byte [bp]
 	call error_int21h		;'G' Read from quote.txt during indexing.
 	xchg cx, ax			;Clobbers AX. We don't care.
 	pop ax
@@ -224,7 +225,7 @@ l4lt:	cmp ah, 0			;State 0 --letter--> increment, state 1.
 	jne strict short l4c		;State 1,2 --letter--> state 1.
 l4q:	inc dl				;Count the quote within the block.
 	jnz l4b
-	mov byte [errorlevel], 'D'
+	mov byte [bp], 'D'
 	jmp strict short error		;'D' Too many quotes start in a 1024-byte block.
 l4b:	add idxc, byte 1		;Count the quote as total. Modifies CF (inc doesn't).
 	adc idxchw, byte 0
@@ -234,7 +235,7 @@ l4next:	loop l4
 	stosb				;Add byte for current block to index.
 	cmp di, offset_index+idxlen
 	jne strict short l2
-	mov byte [errorlevel], 'F'
+	mov byte [bp], 'F'
 	jmp strict short error		;'F' quote.txt too long, index full.
 	; Execution path not reached.
 
@@ -245,7 +246,7 @@ error_int21h:
 	; Fall through to errorc.
 
 ;=======Exits with error if CF is set. Call this function with `call'.
-errorc:	inc byte [errorlevel]		;Keeps CF intact.
+errorc:	inc byte [bp]		;Keeps CF intact.
 	jc strict short error
 retl:	ret				;Continue if there wasn't an error.
 	; Fall through to error.
@@ -255,7 +256,7 @@ error:	mov ah, 9
 	mov dx, errormsg
 	int 21h				;Write error message to stdout.
 	mov ah, 04Ch
-	mov al, [errorlevel]
+	mov al, [bp]
 	int 21h				;Exit to DOS with errorlevel (status) in AL.
 	; Execution path not reached.
 
@@ -277,7 +278,7 @@ l1:	cmp param, 5
 	pop bx				;Restore .txt filehandle.
 
 ;=======Continues after quote.idx has been read or generated.
-l5:	mov byte [errorlevel], 'L'
+l5:	mov byte [bp], 'L'
 	mov ax, [offset_idxc]
 	or ax, [offset_idxchw]
 	jz strict short error		;'L' No quotes in quote.txt.
@@ -426,7 +427,7 @@ p4lt:	cmp ah, 0			;State 0 --letter--> decrement, state 1.
 	mov ax, 00EDAh
 	mov bx, 0BFh			;'┌┐'.
 	call pline			;Draw the top side of the frame.
-	inc byte [errorlevel]
+	inc byte [bp]
 
 lld:    mov cx, 79
 	mov al, 10			;LF.
