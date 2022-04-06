@@ -119,28 +119,24 @@ _start:
 
 l18:	mov ax, 3D00h
 	mov dx, txtfn
-	int 21h				;Open .txt file quote.txt.
-	jnc strict short nc1
-	call error
-nc1:	push ax				;Save .txt filehandle.
+	call int21h			;Open .txt file quote.txt.
+	push ax				;Save .txt filehandle.
 
 	mov ax, 3D00h
 	mov dx, idxfn
 	int 21h				;Open index file quote.idx.
 	mov dl, param
 	adc dl, 0
-	jnz strict short gen
+	jnz strict short gen		;If failed to open (CF set after int 21h above), then generate it.
 	
 ;=======Reads the index file quote.idx.
 	mov bx, ax
 	mov ah, 3Fh
 	mov cx, idxlen+2
 	mov dx, offset_idxc
-	int 21h
-	jnc nc8
-e8:	call error			;Error reading the index file.
-nc8:	sub ax, byte 2
-	js e8				;Error: Index file too short (less than 3 bytes).
+	call int21h			;Read the index file.
+	sub ax, byte 2
+	call errorc			;Index file too short (less than 3 bytes).
 	xchg cx, ax			;Clobber AX, we don't care.
 	mov ah, 3Eh
 	int 21h				;Close the index file.
@@ -170,10 +166,8 @@ l2:	push ax
 	mov cx, 1024
 	mov dx, offset_buffer
 	mov si, dx
-	int 21h
-	jnc nc9
-	call error			;Error reading from quote.txt during indexing.
-nc9:	xchg cx, ax			;Clobbers AX. We don't care.
+	call int21h			;Read from quote.txt during indexing.
+	xchg cx, ax			;Clobbers AX. We don't care.
 	pop ax
 	jcxz l1
 	mov dl, 0			;Number of quotes in this block.
@@ -192,7 +186,7 @@ l4lt:	cmp ah, 0			;State 0 --letter--> increment, state 1.
 	jne strict short l4c		;State 1,2 --letter--> state 1.
 l4q:	inc dl				;Count the quote within the block.
 	jnz l4b
-	call error			;Too many quotes start in an 1024-byte block.
+	jmp strict short error		;Too many quotes start in an 1024-byte block.
 l4b:	add idxc, byte 1		;Count the quote as total. Modifies CF (inc doesn't).
 	adc idxchw, byte 0
 l4c:	mov ah, 1
@@ -201,43 +195,49 @@ l4next:	loop l4
 	stosb				;Add byte for current block to index.
 	cmp di, offset_index+idxlen
 	jne strict short l2
-	push di				;Push error code. Error: quote.txt too long, index full.
+	jmp strict short error		;quote.txt too long, index full.
+	; Execution path not reached.
 
-error:  mov al, 7			;General error message.
-	int 29h				;Beep.
-	pop ax				;Get code address of error, and
-	mov ah, 4Ch			;give it back as errorlevel.
+;=======Does a DOS system call (int 21h) and exits with error if it fails.
+;	Call this function with `call'.
+int21h: int 21h
+	; Fall through to errorc.
+
+;=======Exits with error if CF is set. Call this function with `call'.
+errorc:	jc strict short error
+retl:	ret				;Continue if there wasn't an error.
+	; Fall through to error.
+
+;=======Exits upon error with a nonzero errorlevel indicating failure.
+error:	mov al, 7			;Beep.
+	int 29h				;Print character in AL.
+	mov ax, 4C02h			;Set errorlevel (status) to 2 (error).
 	int 21h				;Exit to DOS.
+	; Execution path not reached.
 
+;=======Rewrites the index file.
 l1:	cmp param, 5
 	je strict short l19
 	push bx				;Save .txt filehandle.
 	mov ah, 3Ch
 	xor cx, cx			;Creates with attributes = 0.
 	mov dx, idxfn
-	int 21h				;Open index file quote.idx for writing.
-	jnc strict short nc2
-	call error
-nc2:	mov bx, ax
+	call int21h			;Open index file quote.idx for rewriting.
+	mov bx, ax
 	mov ah, 40h
 	lea cx, [di-offset_idxc]	;CX := DI-ofs(index) == sizeof_index.
 	mov dx, offset_idxc
-	int 21h				;Write to index file.
-	jnc nc3
-	call error			;Error reading from quote.txt during indexing.
-nc3:	mov ah, 3Eh
+	call int21h			;Write to index file.
+	mov ah, 3Eh
 	int 21h				;Close index file.
 	pop bx				;Restore .txt filehandle.
 l19:	cmp param, 2
-	jne strict short ne4
-	ret				;Exit to DOS with int 20h.
-ne4:
+	je strict short retl		;Exit to DOS with int 20h.
 
 ;=======Continues after quote.idx has been read or generated.
 l5:	mov ax, [offset_idxc]
 	or ax, [offset_idxchw]
-	jnz strict short l5p
-	call error			;No quotes in quote.txt.
+	jz strict short error		;No quotes in quote.txt.
 l5p:	push bx				;Save handle of quote.txt.
 
 ;=======Generates 32-bit random seed in SI:DI. Clobbers flags, AX, BX, CX.
@@ -309,10 +309,8 @@ l6:	sub si, offset_index+2		;SI := 1024-byte block index.
 	jns strict short l8
 	xor dx, dx			;Our quote is in block 0, seeks to the beginning.
 	xor cx, cx
-	int 21h
-	jnc strict short nc5
-	call error			;Error seeking to the beginning.
-nc5:	mov ax, 0A0Ah
+	call int21h			;Seek to the beginning of the index file.
+	mov ax, 0A0Ah
 	stosw				;Add sentinel LF+LF before the beginning, for state 1 --> state 0.
 	; 1023 is the maximum size of the previous quote in the current (first)
 	; block and (quote_limit-1) is the maximum size of our quote.
@@ -327,10 +325,8 @@ l8:	; Set CX:DX to 1024 * SI + 1021.
 	and dx, ((1 << 6) - 1) << 10
 	add dx, 1021
 	adc cx, byte 0
-	int 21h				;Seek to 1024 * SI + 1021, near the end of the previous block.
-	jnc strict short nc6
-	call error
-nc6:	; 4 is the size of the end of the previous block, 1023 is the maximum size of
+	call int21h			;Seek to 1024 * SI + 1021, near the end of the previous block.
+	; 4 is the size of the end of the previous block, 1023 is the maximum size of
 	; the previous quote in the current block and (quote_limit-1) is the maximum
 	; size of our quote.
 	mov cx, 3+1023+(quote_limit-1)
@@ -338,10 +334,8 @@ nc6:	; 4 is the size of the end of the previous block, 1023 is the maximum size 
 ;=======Reads the blocks containing our quote (CX bytes in total).
 l20:	mov dx, di
 	mov ah, 3Fh
-	int 21h				;Read from .txt file.
-	jnc strict short nc7
-	call error			;Error reading quote.
-nc7:	add ax, dx
+	call int21h			;Read quote from .txt file.
+	add ax, dx
 	xchg ax, di			;DI := AX and clobber AX, but shorter.
 	mov ax, 0A0Ah
 	stosw				;Append sentinel LF+LF.
@@ -393,7 +387,7 @@ lld:    mov cx, 79
 	lea si, [di-1]
 	repnz scasb			;Seek LF using DI.
 	jz strict short z5
-	call error			;Line too long.
+	jmp strict near error		;Line too long in quote.
 z5:	sub cx, byte 78			;Now: byte[di-1] == 10 (LF).
 	cmp byte [di-2], 13		;Compare against CRLF, we try to match CR.
 	jne strict short z5b
