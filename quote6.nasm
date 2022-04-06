@@ -287,13 +287,14 @@ error:  mov al, 7			;General error message.
 	mov ah, 4Ch			;give it back as errorlevel.
 	int 21h				;Exit to DOS.
 
+;=======Rewrites the index file.
 l1:	cmp param, 5
 	je strict short l19
 	push bx				;Save .txt filehandle.
 	mov ah, 3Ch
 	a86_xor cx, cx			;Creates with attributes = 0.
 	mov dx, idxfn
-	int 21h				;Open index file quote.idx for writing.
+	int 21h				;Open index file quote.idx for rewriting.
 	jnc strict short nc2
 	call error
 nc2:	a86_mov bx, ax
@@ -406,7 +407,7 @@ lld:    mov cx, 79
 	lea si, [di-1]
 	repnz scasb			;Seek CR using DI.
 	jz strict short z5
-	call error			;Line too long.
+	call error			;Line too long in quote.
 z5:	sub cx, byte 79			;Now: byte[di-1] == 10 (LF).
 	inc cx				;Replacing inc+neg by not wouldn't change ZF.
 	neg cx				;CX := length(line); without CR.
