@@ -35,7 +35,8 @@ History of code written in 1996 and updated in 2022:
 * 2.40 Turbo Pascal 7.0 inline assembly ported to A86 3.22 assembly.
        Source code and .exe program binary have been lost.
 * 2.41 Turbo Pascal 7.0 inline assembly ported to NASM 0.98.39 assembly
-       on 2022-03-27. Random number generation is very slow.
+       on 2022-03-27. Random number generation is very slow. Contains a
+       bugfix related to ANSI.SYS detection.
        quote4.nasm is NASM 0.98.39 source code.
        quote4n.com.orig and quote4.com.orig are 1251 bytes, first built on
        2022-03-27.
