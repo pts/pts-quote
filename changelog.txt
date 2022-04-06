@@ -68,19 +68,18 @@ History of code written in 1996 and updated in 2022:
        quote6.8 is A86 3.22 .. 4.05 source code.
        quote6.nasm is NASM 0.98.39 source code.
        quote6.com.orig is 794 bytes. It was distributed as quote.com in 1996.
-* 2.63 From 2.62 some bugfixes and compatibility improvements with previous versions.
-       Can print the last quote even if file not terminated by CRLF+CRLF.
-       Ignores any number of empty lines between quotes.
+* 2.63 From 2.62 some bugfixes and compatibility improvements with previous
+       versions. It can print the last quote even if file not terminated by
+       CRLF+CRLF. It can use LF and/or CRLF as line terminator. It ignores
+       any number of empty lines between quotes. It reports error codes.
        Work started on 2022-03-30. Also works on 8086 (not only 80286).
        quote63.nasm is NASM 0.98.39 source code.
-       quote63.com.orig is ~850 bytes.
+       quote63.com.orig is ~1050 bytes.
 * 2.64 quotex.nasm is under development since 2022-03-18, it's not released.
        TODO: Linux i386 version with ANSI codes for linux and xterm terminals
        TODO: more strict with leading -- and -&
        TODO: autodetect if the index file needs to be regenerated
-       TODO: add validator for quote.txt, at least display a different error
        TODO: better handle quotes longer than 4096 bytes
-       TODO: add more error checking (especially for I/O and limits)
        TODO: add quote.idx compatibility with version 2.64: keep idxc small
              so that it's at most 65535 quotes in 55 << 10 blocks
 * 2.70 A DOS device driver (loadable from CONFIG.SYS) variant of 2.62,
