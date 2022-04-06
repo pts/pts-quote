@@ -171,8 +171,9 @@ l2:	push ax
 	mov dx, offset_buffer
 	mov si, dx
 	int 21h
-	; !! TODO: add jc error handling.
-	xchg cx, ax			;Clobbers AX. We don't care.
+	jnc nc9
+	call error			;Error reading from quote.txt during indexing.
+nc9:	xchg cx, ax			;Clobbers AX. We don't care.
 	pop ax
 	jcxz l1
 	mov dl, 0			;Number of quotes in this block.
@@ -222,8 +223,9 @@ nc2:	mov bx, ax
 	lea cx, [di-offset_idxc]	;CX := DI-ofs(index) == sizeof_index.
 	mov dx, offset_idxc
 	int 21h				;Write to index file.
-	; !! TODO: add jc error handling.
-	mov ah, 3Eh
+	jnc nc3
+	call error			;Error reading from quote.txt during indexing.
+nc3:	mov ah, 3Eh
 	int 21h				;Close index file.
 	pop bx				;Restore .txt filehandle.
 l19:	cmp param, 2
