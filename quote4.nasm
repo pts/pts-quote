@@ -49,562 +49,514 @@ cpu 286
 org 0x100
 
 _code:
-_start:
-
-; Increase DS and SS to accommodate for the total memory usage of 68 KiB (67
-; KiB for code and data + 1 KiB for stack).
-mov ah, 0x4a  ; https://stanislavs.org/helppc/int_21-4a.html
-mov bx, 0x1100  ; Number of bytes needed == 0x1100 * 16, that's 68 KiB.
-int 0x21
-jnc strict short resize_ok
-jmp strict near fatal_error
+_start:  ; begin { Főprogram }
+	; Increase DS and SS to accommodate for the total memory usage of 68 KiB (67
+	; KiB for code and data + 1 KiB for stack).
+	mov ah, 0x4a  ; https://stanislavs.org/helppc/int_21-4a.html
+	mov bx, 0x1100  ; Number of bytes needed == 0x1100 * 16, that's 68 KiB.
+	int 0x21
+	jnc strict short resize_ok
+	jmp strict near fatal_error
 resize_ok:
-mov ax, ds
-add ax, seg_delta
-mov ds, ax
-mov es, ax  ; es will remain this way for most of the rest of the run.
-mov ax, ss
-add ax, 0x100  ; 1 KiB of stack at the end of the 68 KiB.
-mov ss, ax
+	mov ax, ds
+	add ax, seg_delta
+	mov ds, ax
+	mov es, ax  ; es will remain this way for most of the rest of the run.
+	mov ax, ss
+	add ax, 0x100  ; 1 KiB of stack at the end of the 68 KiB.
+	mov ss, ax
+	
+main:	mov al, 0xd  ; Writeln
+	int 0x29
+	mov al, 0xa
+	int 0x29
 
-mov al, 0xd  ; Writeln
-int 0x29
-mov al, 0xa
-int 0x29
-
-push ds  ; Header ki
-push strict word headermsg
-call func_Header
-
-; Detect ANSI.SYS.
-;
-; From http://www.osfree.org/doku/en:docs:dos:api:int29 :
-; COMMAND.COM v3.2 and v3.3 compare the INT 29 vector against the INT 20
-; vector and assume that ANSI.SYS is installed if the segment is larger.
-push es
-xor ax, ax
-mov es, ax
-mov bx, [es:0x29*4+2]  ; ansi:=memw[0:$29*4+2]>memw[0:$20*4+2];
-cmp bx, [es:0x20*4+2]
-pop es
-jae strict short @95
-mov byte [ttt], '*'  ; This means there's no ANSI.SYS
+	push ds  ; Header ki
+	push strict word headermsg
+	call func_Header
+	
+	; Detect ANSI.SYS.
+	;
+	; From http://www.osfree.org/doku/en:docs:dos:api:int29 :
+	; COMMAND.COM v3.2 and v3.3 compare the INT 29 vector against the INT 20
+	; vector and assume that ANSI.SYS is installed if the segment is larger.
+	push es
+	xor ax, ax
+	mov es, ax
+	mov bx, [es:0x29*4+2]  ; ansi:=memw[0:$29*4+2]>memw[0:$20*4+2];
+	cmp bx, [es:0x20*4+2]
+	pop es
+	jae strict short @95
+	mov byte [ttt], '*'  ; This means there's no ANSI.SYS
 @95:
 
-mov al, [0x81]  ; First character of command-line arguments in PSP.  ; xch:=char(mem[PrefixSeg:$81]);
-cmp al, ' '
-jne strict short @96  ; if xch=' ' then xch:=char(mem[PrefixSeg:$82]);
-mov al, [0x82]
-@96:
-cmp byte [0x80], 0x0  ; if mem[PrefixSeg:$80]=0 then xch:=' ';
-jne strict short @94
-mov al, ' '
-@94:
-and al, 255-32
-mov [qqq_xch], al
-; qqq_w:=XReset(IdxFn);
-mov ax, 0x3d00  ; Open for Read Only, C-Mode
-mov dx, idxfn
-int 0x21
-mov [qqq_han], ax
-sbb ax, ax  ; AX:=0, ha OK ; AX:=$FFFF, ha hiba
-mov word [idx], 0x0  ; idx[0]:=0
-cmp ax, strict word 0x0  ; if (IOResult<>0) or (xch<>#0) then
-jne strict short @90
-cmp byte [qqq_xch], 0x0
-jne strict short @90
-jmp strict near lls
-@90:
-; XReset(TXTFN);
-mov ax, 0x3d00  ; Open for Read Only, C-Mode
-mov dx, txtfn
-int 0x21
-;jc strict near fatal_error  ; BUG: Fail.
-mov [qqq_han], ax
-sbb ax, ax
-; qqq_max:=filesize(f);
-mov ax, 0x4202
-mov bx, [qqq_han]
-xor cx, cx
-xor dx, dx
-int 0x21
-mov [qqq_max], ax
-mov [qqq_max+2], dx
-mov ax, 0x4200
-mov bx, [qqq_han]
-xor cx, cx
-xor dx, dx
-int 0x21
-mov word [qqq_b], full+4  ; b:=full+4
-xor ax, ax
-mov [qqq_l], ax  ; l:=0
-mov [qqq_l+2], ax
-mov [qqq_oldl], ax  ; oldl:=0
-mov [qqq_oldl+2], ax
-mov word [qqq_a], 0x1
-@81:
-; repeat
-call func_GetNext
-mov si, buf-4
-add si, [qqq_b]
-cmp word [si], 0x0a0d  ; CRLF
-jne strict short @82
-cmp word [si+0x2], 0x0a0d  ; CRLF
-jne strict short @82  ;  if buf[b-4]=newline then begin
-mov ax, [qqq_l]  ;    idx[a]:=l-oldl
-mov dx, [qqq_l+2]
-sub ax, [qqq_oldl]
-sbb dx, [qqq_oldl+2]
-mov di, idx
-add di, [qqq_a]
-add di, [qqq_a]
-mov [di], ax
-mov [di+0x2], dx
-inc word [qqq_a]
-mov ax, [qqq_l]  ;    oldl:=l
-mov [qqq_oldl], ax
-mov ax, [qqq_l+2]
-mov [qqq_oldl+2], ax  ;  end;
-@82:
-mov ax, [qqq_max]  ; until l=max
-mov dx, [qqq_max+2]
-cmp [qqq_l], ax
-jne strict short @81
-cmp [qqq_l+2], dx
-jne strict short @81
-
-; Close(f);
-mov ah, 0x3e
-mov bx, [qqq_han]
-int 0x21
-cmp byte [qqq_xch], 'A'  ; Nem írjuk ki az IT-t, ha az A par. van
-jne strict short @82_ne
-jmp strict near llc
-@82_ne:
-mov cx, [qqq_a]
-dec cx
-mov si, idx+2
-mov di, buf
-xor dx, dx
-@83:
-lodsw
-stosb
-cmp ax, 0xf0
-jb strict short @84
-dec di
-rol ax, byte 0x8
-or ax, 0xf0
-stosw
-@84:
-loop @83
-mov [qqq_a], di
-sub word [qqq_a], buf
-
-; XRewrite(IDXFN);
-mov ah, 0x3c  ; Create file
-mov cx, 0x0
-mov dx, idxfn
-int 0x21
-jnc strict short @91
+	mov al, [0x81]  ; First character of command-line arguments in PSP.  ; xch:=char(mem[PrefixSeg:$81]);
+	cmp al, ' '
+	jne strict short @96  ; if xch=' ' then xch:=char(mem[PrefixSeg:$82]);
+	mov al, [0x82]
+@96:	cmp byte [0x80], 0x0  ; if mem[PrefixSeg:$80]=0 then xch:=' ';
+	jne strict short @94
+	mov al, ' '
+@94:	and al, 255-32
+	mov [qqq_xch], al
+	; qqq_w:=XReset(IdxFn);
+	mov ax, 0x3d00  ; Open for Read Only, C-Mode
+	mov dx, idxfn
+	int 0x21
+	mov [qqq_han], ax
+	sbb ax, ax  ; AX:=0, ha OK ; AX:=$FFFF, ha hiba
+	mov word [idx], 0x0  ; idx[0]:=0
+	cmp ax, strict word 0x0  ; if (IOResult<>0) or (xch<>#0) then
+	jne strict short @90
+	cmp byte [qqq_xch], 0x0
+	jne strict short @90
+	jmp strict near lls
+@90:	; XReset(TXTFN);
+	mov ax, 0x3d00  ; Open for Read Only, C-Mode
+	mov dx, txtfn
+	int 0x21
+	;jc strict near fatal_error  ; BUG: Fail.
+	mov [qqq_han], ax
+	sbb ax, ax
+	; qqq_max:=filesize(f);
+	mov ax, 0x4202
+	mov bx, [qqq_han]
+	xor cx, cx
+	xor dx, dx
+	int 0x21
+	mov [qqq_max], ax
+	mov [qqq_max+2], dx
+	mov ax, 0x4200
+	mov bx, [qqq_han]
+	xor cx, cx
+	xor dx, dx
+	int 0x21
+	mov word [qqq_b], full+4  ; b:=full+4
+	xor ax, ax
+	mov [qqq_l], ax  ; l:=0
+	mov [qqq_l+2], ax
+	mov [qqq_oldl], ax  ; oldl:=0
+	mov [qqq_oldl+2], ax
+	mov word [qqq_a], 0x1
+@81:	; repeat
+	call func_GetNext
+	mov si, buf-4
+	add si, [qqq_b]
+	cmp word [si], 0x0a0d  ; CRLF
+	jne strict short @82
+	cmp word [si+0x2], 0x0a0d  ; CRLF
+	jne strict short @82  ;  if buf[b-4]=newline then begin
+	mov ax, [qqq_l]  ;    idx[a]:=l-oldl
+	mov dx, [qqq_l+2]
+	sub ax, [qqq_oldl]
+	sbb dx, [qqq_oldl+2]
+	mov di, idx
+	add di, [qqq_a]
+	add di, [qqq_a]
+	mov [di], ax
+	mov [di+0x2], dx
+	inc word [qqq_a]
+	mov ax, [qqq_l]  ;    oldl:=l
+	mov [qqq_oldl], ax
+	mov ax, [qqq_l+2]
+	mov [qqq_oldl+2], ax  ;  end;
+@82:	mov ax, [qqq_max]  ; until l=max
+	mov dx, [qqq_max+2]
+	cmp [qqq_l], ax
+	jne strict short @81
+	cmp [qqq_l+2], dx
+	jne strict short @81
+	
+	; Close(f);
+	mov ah, 0x3e
+	mov bx, [qqq_han]
+	int 0x21
+	cmp byte [qqq_xch], 'A'  ; Nem írjuk ki az IT-t, ha az A par. van
+	jne strict short @82_ne
+	jmp strict near llc
+@82_ne:	mov cx, [qqq_a]
+	dec cx
+	mov si, idx+2
+	mov di, buf
+	xor dx, dx
+@83:	lodsw
+	stosb
+	cmp ax, 0xf0
+	jb strict short @84
+	dec di
+	rol ax, byte 0x8
+	or ax, 0xf0
+	stosw
+@84:	loop @83
+	mov [qqq_a], di
+	sub word [qqq_a], buf
+	
+	; XRewrite(IDXFN);
+	mov ah, 0x3c  ; Create file
+	mov cx, 0x0
+	mov dx, idxfn
+	int 0x21
+	jnc strict short @91
 fatal_error:
-mov ax, 0x4cf0  ; Fatal error
-int 0x21
-; blockwrite(f, buf, qqq_a);
-@91:
-mov ah, 0x40
-mov bx, [qqq_han]
-mov cx, [qqq_a]
-mov dx, buf
-int 0x21
-; close(f);
-mov ah, 0x3e
-mov bx, [qqq_han]
-int 0x21
-; goto c;
-jmp strict short llc
-
+	mov ax, 0x4cf0  ; Fatal error
+	int 0x21
+	; blockwrite(f, buf, qqq_a);
+@91:	mov ah, 0x40
+	mov bx, [qqq_han]
+	mov cx, [qqq_a]
+	mov dx, buf
+	int 0x21
+	; close(f);
+	mov ah, 0x3e
+	mov bx, [qqq_han]
+	int 0x21
+	; goto c;
+	jmp strict short llc
+	
 lls:  ; end else begin
-; XReset(IDXFN);
-mov ax, 0x3d00  ; Open for Read Only, C-Mode
-mov dx, idxfn
-int 0x21
-;jc strict near fatal_error  ; BUG: Fail.
-mov [qqq_han], ax
-sbb ax, ax
-; blockread(f, buf, $FFFF, qqq_a);
-mov ah, 0x3f
-mov bx, [qqq_han]
-mov cx, 0xffff  ; BUG: To avoid buffer overflow, read just full+4 instead of $FFFF.
-mov dx, buf
-int 0x21
-mov [qqq_a], ax  ; Save number of (compressed) bytes read to qqq_a.
-; close(f);
-mov ah, 0x3e
-mov bx, [qqq_han]
-int 0x21
-
-mov cx, [qqq_a]
-mov dx, 0x1
-mov si, buf
-mov di, idx+2
-@85:
-lodsb
-mov ah, 0x0
-stosw
-cmp al, 0xf0
-jb strict short @86
-dec di
-dec di
-and al, 0xf
-mov ah, al
-lodsb
-stosw
-dec cx
-@86:
-inc dx
-loop @85
-mov [qqq_a], dx
-llc:
-cmp byte [qqq_xch], 'C'
-jne strict short @ne2
-jmp strict near llf
-; XReset(TXTFN);
-@ne2:
-mov ax, 0x3d00  ; Open for Read Only, C-Mode
-mov dx, txtfn
-int 0x21
-;jc strict near fatal_error  ; BUG: Fail.
-mov [qqq_han], ax
-sbb ax, ax
-
-; qqq_w:=random(qqq_a+1);  Then 0 <= qqq_w < qqq_a + 1.
-;
-; According to https://stanislavs.org/helppc/bios_data_area.html , dword [0x40:0x6c]
-; is the daily timer counter: equal to zero at midnight; incremented by INT 8;
-; read/set by int 0x1a. Thus this random number generator is very slow.
-;
-; First we generate a 16-bit random number based on the timer counter. The code for
-; this is ad hoc and messy.
-push es
-@98:
-xor ax, ax
-mov es, ax
-mov ax, [es:0x46c]
-xor ax, [es:0x46e]
-mov bx, dx
-xor ax, bx
-mov cx, [es:0x46d]
-mov bx, 0xe21
-@99:
-mul bx
-add ax, 0xbe0
-loop @99
-; Now we have the 16-bit random number in ax. If it is small enough (qqq_a <= ax),
-; then we are done, otherwise we generate another random number in a busy loop, also
-; waiting for int 0x8 timer to tick. Thus this random number generator is very slow.
-cmp ax, [qqq_a]
-ja strict short @98  ; BUG: This makes the random generator very slow.
-mov [qqq_w], ax  ; Save random(qqq_a+1) to qqq_w.
-pop es
-
-mov word [qqq_l], 0x0  ; L kezdőoffszet kiszámolása
-mov word [qqq_l+2], 0x0
-mov si, idx
-add si, [qqq_w]
-add si, [qqq_w]
-std
-@97:
-lodsw  ; L:=IDX[W]+IDX[W-1]+...+IDX[1]
-add [qqq_l], ax
-adc word [qqq_l+2], byte +0x0
-cmp si, idx
-jne strict short @97
-cld
-push strict word 0xbfda  ; '┌┐'  ; Keret ki
-call func_PrintLine
-
-lld:
-; seek(f, qqq_l);
-mov ax, 0x4200
-mov bx, [qqq_han]
-mov dx, [qqq_l]
-mov cx, [qqq_l+2]
-int 0x21
-; blockread(f, s[1], 255, qqq_w);
-mov ah, 0x3f
-mov bx, [qqq_han]
-mov cx, 0xff
-mov dx, var_s+1
-int 0x21
-mov [qqq_w], ax
-
-cmp word [qqq_w], byte +0x0  ; Stop at EOF
-jne strict short @ne1
-jmp strict near lle
-@ne1:
-mov bx, 0x0  ; Look for #13 to determine length(s)
-mov si, var_s+1
-@12:
-or bh, bh
-jnz strict short @13
-cmp byte [bx+si], 0xd
-je strict short @11
-inc bx
-jmp strict short @12
-@13:
-jmp strict near llf  ; Error: Line longer than 255 bytes.
-@11:
-; Beállítjuk a string hosszát
-dw 0x1e88, var_s  ; mov byte [var_s], bl  ; Workaround to prevent bug in yasm-1.2.0 and yasm-1.3.0: INTERNAL ERROR at modules/arch/x86/x86expr.c, line 417: unexpected expr op
-inc bx
-inc bx
-add [qqq_l], bx  ; inc(l,length(s)+2);
-adc word [qqq_l+2], byte +0x0
-
-; START OF ALIGN
-;
-; If S='' align returns TRUE else it returns FALSE. Align prints S with the
-; correct color & alignment according to the control codes found in S[1, 2].
-
-; Calculate the value of BEFORE first using up AnsiCh: #0=Left '-'=Right
-; '&'=Center alignment
-mov cx, ds
-mov si, var_s
-mov [qqq_w], si
-lodsb
-cmp al, 0x0
-jne strict short @d
-mov al, 0x1
-mov ds, cx
-jmp strict near @9  ; Empty string: do nothing but restore original CS
-@d:
-mov byte [qqq_ansich], 0x0  ; AnsiCh is 0 by default
-cmp byte [si], '-'
-jne strict short @c
-mov al, [si+0x1]
-mov [qqq_ansich], al
-add word [qqq_w], byte 2  ; If not AnsiCh<>0 the 1st 2 char won't be in the str
-mov al, [si-0x1]
-dec ax
-dec ax
-mov [si+0x1], al
-@c:
-mov ah, 0x0
-mov ds, cx
-mov bx, 0x4e
-cmp byte [qqq_ansich], 0x0
-jne strict short @a
-mov al, 0x0
-mov bx, 0x0
-@a:
-cmp byte [qqq_ansich], '&'
-jne strict short @b
-mov bx, 0x27
-shr ax, 1
-@b:
-sub bx, ax
-mov [qqq_before], bx
-mov al, 0xb3  ; '│'  ; The line starts by this
-int 0x29
-cmp byte [ttt], '*'  ; Put out an ANSI EscSeq to set color if needed
-je strict short @6
-mov ah, 0x9
-mov al, [qqq_ansich]
-cmp al, 0x0
-je strict short @6
-add al, 0xa
-mov [ttt+17+3], al
-mov dx, ttt+17
-int 0x21
-mov byte [qqq_ansich], 0x0
-@6:
-push ds  ; Display the string "s" with "before" spaces in front of it
-mov si, [qqq_w]
-lodsb
-mov cl, al
-mov ch, 0x0
-mov dx, cx
-jcxz @1
-mov cx, [qqq_before]
-jcxz @5
-mov al, ' '
-@2:
-int 0x29
-loop @2
-@5:
-mov cx, dx
-jcxz @8
-@3:
-lodsb
-int 0x29
-loop @3
-@8:
-mov cx, 0x4e
-sub cx, [qqq_before]
-sub cx, dx
-jcxz @1
-mov al, ' '
-@4:
-int 0x29
-loop @4
-@1:
-pop ds
-cmp byte [ttt], '*'  ; Restore original color via ANSI EscSeq if needed
-je strict short @7
-mov ah, 0x9
-mov dx, ttt+25
-int 0x21
-@7:
-mov al, 0xb3  ; '│'  ; The line ends by this, too
-int 0x29
-mov al, 0x0 ; The return value is FALSE
-; END OF ALIGN
-
-@9:
-or al, al
-jnz strict short lle
-jmp strict near lld  ; Ha FALSE-t ad vissza, még van köv. sor, Különben lábléc és program vége
-
-lle:
-push strict word 0xd9c0  ; '└┘'
-call func_PrintLine
-push ds
-push strict word footermsg
-call func_Header
-mov ah, 0x3e  ; Close(F);
-mov bx, [qqq_han]
-int 0x21
-llf:
-mov ax, 0x4c00  ; EXIT_SUCCESS.
-int 0x21  ; Exit to DOS.
-
+	; XReset(IDXFN);
+	mov ax, 0x3d00  ; Open for Read Only, C-Mode
+	mov dx, idxfn
+	int 0x21
+	;jc strict near fatal_error  ; BUG: Fail.
+	mov [qqq_han], ax
+	sbb ax, ax
+	; blockread(f, buf, $FFFF, qqq_a);
+	mov ah, 0x3f
+	mov bx, [qqq_han]
+	mov cx, 0xffff  ; BUG: To avoid buffer overflow, read just full+4 instead of $FFFF.
+	mov dx, buf
+	int 0x21
+	mov [qqq_a], ax  ; Save number of (compressed) bytes read to qqq_a.
+	; close(f);
+	mov ah, 0x3e
+	mov bx, [qqq_han]
+	int 0x21
+	
+	mov cx, [qqq_a]
+	mov dx, 0x1
+	mov si, buf
+	mov di, idx+2
+@85:	lodsb
+	mov ah, 0x0
+	stosw
+	cmp al, 0xf0
+	jb strict short @86
+	dec di
+	dec di
+	and al, 0xf
+	mov ah, al
+	lodsb
+	stosw
+	dec cx
+@86:	inc dx
+	loop @85
+	mov [qqq_a], dx
+llc:	cmp byte [qqq_xch], 'C'
+	jne strict short @ne2
+	jmp strict near llf
+	; XReset(TXTFN);
+@ne2:	mov ax, 0x3d00  ; Open for Read Only, C-Mode
+	mov dx, txtfn
+	int 0x21
+	;jc strict near fatal_error  ; BUG: Fail.
+	mov [qqq_han], ax
+	sbb ax, ax
+	
+	; qqq_w:=random(qqq_a+1);  Then 0 <= qqq_w < qqq_a + 1.
+	;
+	; According to https://stanislavs.org/helppc/bios_data_area.html , dword [0x40:0x6c]
+	; is the daily timer counter: equal to zero at midnight; incremented by INT 8;
+	; read/set by int 0x1a. Thus this random number generator is very slow.
+	;
+	; First we generate a 16-bit random number based on the timer counter. The code for
+	; this is ad hoc and messy.
+	push es
+@98:	xor ax, ax
+	mov es, ax
+	mov ax, [es:0x46c]
+	xor ax, [es:0x46e]
+	mov bx, dx
+	xor ax, bx
+	mov cx, [es:0x46d]
+	mov bx, 0xe21
+@99:	mul bx
+	add ax, 0xbe0
+	loop @99
+	; Now we have the 16-bit random number in ax. If it is small enough (qqq_a <= ax),
+	; then we are done, otherwise we generate another random number in a busy loop, also
+	; waiting for int 0x8 timer to tick. Thus this random number generator is very slow.
+	cmp ax, [qqq_a]
+	ja strict short @98  ; BUG: This makes the random generator very slow.
+	mov [qqq_w], ax  ; Save random(qqq_a+1) to qqq_w.
+	pop es
+	
+	mov word [qqq_l], 0x0  ; L kezdőoffszet kiszámolása
+	mov word [qqq_l+2], 0x0
+	mov si, idx
+	add si, [qqq_w]
+	add si, [qqq_w]
+	std
+@97:	lodsw  ; L:=IDX[W]+IDX[W-1]+...+IDX[1]
+	add [qqq_l], ax
+	adc word [qqq_l+2], byte +0x0
+	cmp si, idx
+	jne strict short @97
+	cld
+	push strict word 0xbfda  ; '┌┐'  ; Keret ki
+	call func_PrintLine
+	
+lld:	; seek(f, qqq_l);
+	mov ax, 0x4200
+	mov bx, [qqq_han]
+	mov dx, [qqq_l]
+	mov cx, [qqq_l+2]
+	int 0x21
+	; blockread(f, s[1], 255, qqq_w);
+	mov ah, 0x3f
+	mov bx, [qqq_han]
+	mov cx, 0xff
+	mov dx, var_s+1
+	int 0x21
+	mov [qqq_w], ax
+	
+	cmp word [qqq_w], byte +0x0  ; Stop at EOF
+	jne strict short @ne1
+	jmp strict near lle
+@ne1:	mov bx, 0x0  ; Look for #13 to determine length(s)
+	mov si, var_s+1
+@12:	or bh, bh
+	jnz strict short @13
+	cmp byte [bx+si], 0xd
+	je strict short @11
+	inc bx
+	jmp strict short @12
+@13:	jmp strict near llf  ; Error: Line longer than 255 bytes.
+@11:	; Beállítjuk a string hosszát
+	dw 0x1e88, var_s  ; mov byte [var_s], bl  ; Workaround to prevent bug in yasm-1.2.0 and yasm-1.3.0: INTERNAL ERROR at modules/arch/x86/x86expr.c, line 417: unexpected expr op
+	inc bx
+	inc bx
+	add [qqq_l], bx  ; inc(l,length(s)+2);
+	adc word [qqq_l+2], byte +0x0
+	
+	; START OF ALIGN
+	;
+	; If S='' align returns TRUE else it returns FALSE. Align prints S with the
+	; correct color & alignment according to the control codes found in S[1, 2].
+	
+	; Calculate the value of BEFORE first using up AnsiCh: #0=Left '-'=Right
+	; '&'=Center alignment
+	mov cx, ds
+	mov si, var_s
+	mov [qqq_w], si
+	lodsb
+	cmp al, 0x0
+	jne strict short @d
+	mov al, 0x1
+	mov ds, cx
+	jmp strict near @9  ; Empty string: do nothing but restore original CS
+@d:	mov byte [qqq_ansich], 0x0  ; AnsiCh is 0 by default
+	cmp byte [si], '-'
+	jne strict short @c
+	mov al, [si+0x1]
+	mov [qqq_ansich], al
+	add word [qqq_w], byte 2  ; If not AnsiCh<>0 the 1st 2 char won't be in the str
+	mov al, [si-0x1]
+	dec ax
+	dec ax
+	mov [si+0x1], al
+@c:	mov ah, 0x0
+	mov ds, cx
+	mov bx, 0x4e
+	cmp byte [qqq_ansich], 0x0
+	jne strict short @a
+	mov al, 0x0
+	mov bx, 0x0
+@a:	cmp byte [qqq_ansich], '&'
+	jne strict short @b
+	mov bx, 0x27
+	shr ax, 1
+@b:	sub bx, ax
+	mov [qqq_before], bx
+	mov al, 0xb3  ; '│'  ; The line starts by this
+	int 0x29
+	cmp byte [ttt], '*'  ; Put out an ANSI EscSeq to set color if needed
+	je strict short @6
+	mov ah, 0x9
+	mov al, [qqq_ansich]
+	cmp al, 0x0
+	je strict short @6
+	add al, 0xa
+	mov [ttt+17+3], al
+	mov dx, ttt+17
+	int 0x21
+	mov byte [qqq_ansich], 0x0
+@6:	push ds  ; Display the string "s" with "before" spaces in front of it
+	mov si, [qqq_w]
+	lodsb
+	mov cl, al
+	mov ch, 0x0
+	mov dx, cx
+	jcxz @1
+	mov cx, [qqq_before]
+	jcxz @5
+	mov al, ' '
+@2:	int 0x29
+	loop @2
+@5:	mov cx, dx
+	jcxz @8
+@3:	lodsb
+	int 0x29
+	loop @3
+@8:	mov cx, 0x4e
+	sub cx, [qqq_before]
+	sub cx, dx
+	jcxz @1
+	mov al, ' '
+@4:	int 0x29
+	loop @4
+@1:	pop ds
+	cmp byte [ttt], '*'  ; Restore original color via ANSI EscSeq if needed
+	je strict short @7
+	mov ah, 0x9
+	mov dx, ttt+25
+	int 0x21
+@7:	mov al, 0xb3  ; '│'  ; The line ends by this, too
+	int 0x29
+	mov al, 0x0 ; The return value is FALSE
+	; END OF ALIGN
+	
+@9:	or al, al
+	jnz strict short lle
+	jmp strict near lld  ; Ha FALSE-t ad vissza, még van köv. sor, Különben lábléc és program vége
+	
+lle:	push strict word 0xd9c0  ; '└┘'
+	call func_PrintLine
+	push ds
+	push strict word footermsg
+	call func_Header
+	mov ah, 0x3e  ; Close(F);
+	mov bx, [qqq_han]
+	int 0x21
+llf:	mov ax, 0x4c00  ; EXIT_SUCCESS.
+	int 0x21  ; Exit to DOS.
+	
 ; function GetNext: char; assembler;
 func_GetNext:
-cmp word [qqq_b], full+4  ; if qqq_b=full+4 then begin
-jne strict short @88  ; No special meaning for @ in nasm, it's just a normal label character.
-; move(src:=buf[full], dst:=buf[0], 4);
-  ; BUG: This code is completely buggy. It should be:
-  ; mov si, buf + full
-  ; mov di, buf
-  ; movsw
-  ; movsw
-  xor di, buf
-  add di, full
-  mov ax, [buf]
-  stosw
-  mov ax, [buf+2]
-  stosw
-; blockread(f, buf[4], full, qqq_w);
-mov ah, 0x3f
-mov bx, [qqq_han]
-mov cx, full
-mov dx, buf+4
-int 0x21
-jnz strict short @87  ; BUG: should be jnc.
-mov ax, 0x4cf1  ; Abort on read error.
-int 0x21
-@87:
-mov word [qqq_b], 0x4  ; endif
-@88:
-mov bx, [qqq_b]  ; GetNext:=Buf[qqq_B];
-mov al, [bx+buf]
-inc word [qqq_b]
-add word [qqq_l], byte +0x1  ; inc(qqq_l);
-adc word [qqq_l+2], byte +0x0
-ret
-
+	cmp word [qqq_b], full+4  ; if qqq_b=full+4 then begin
+	jne strict short @88  ; No special meaning for @ in nasm, it's just a normal label character.
+	; move(src:=buf[full], dst:=buf[0], 4);
+	  ; BUG: This code is completely buggy. It should be:
+	  ; mov si, buf + full
+	  ; mov di, buf
+	  ; movsw
+	  ; movsw
+	  xor di, buf
+	  add di, full
+	  mov ax, [buf]
+	  stosw
+	  mov ax, [buf+2]
+	  stosw
+	; blockread(f, buf[4], full, qqq_w);
+	mov ah, 0x3f
+	mov bx, [qqq_han]
+	mov cx, full
+	mov dx, buf+4
+	int 0x21
+	jnz strict short @87  ; BUG: should be jnc.
+	mov ax, 0x4cf1  ; Abort on read error.
+	int 0x21
+@87:	mov word [qqq_b], 0x4  ; endif
+@88:	mov bx, [qqq_b]  ; GetNext:=Buf[qqq_B];
+	mov al, [bx+buf]
+	inc word [qqq_b]
+	add word [qqq_l], byte +0x1  ; inc(qqq_l);
+	adc word [qqq_l+2], byte +0x0
+	ret
+	
 ; procedure Header(const s: OpenString); assembler;
-%define Header_arg_s (bp+4)
 func_Header:
-push bp
-mov bp, sp
-cmp byte [ttt], '*'
-je strict short @71
-mov dx, ttt+25
-mov ah, 0x9
-int 0x21
-mov dx, ttt
-mov ah, 0x9
-int 0x21
-@71:
-mov al, 0xb2  ; '▓'
-mov cx, 0x3
-@72:
-int 0x29
-int 0x29
-int 0x29
-int 0x29
-int 0x29
-dec al
-loop @72
-push ds
-lds si, [Header_arg_s]
-lodsb
-mov ah, 0x0
-mov dx, ax
-shr ax, 1
-mov cx, 0x19
-sub cx, ax
-mov bx, cx
-mov al, ' '
-jcxz @74
-@75:
-int 0x29
-loop @75
-@74:
-mov cx, [si-0x1]
-mov ch, 0x0
-@76:
-lodsb
-int 0x29
-loop @76
-pop ds
-mov cx, 0x32
-sub cx, bx
-sub cx, dx
-mov al, ' '
-jcxz @78
-@77:
-int 0x29
-loop @77
-@78:
-mov al, 0xb0  ; '░'
-mov cx, 0x3
-@73:
-int 0x29
-int 0x29
-int 0x29
-int 0x29
-int 0x29
-inc al
-loop @73
-cmp byte [ttt], '*'
-je strict short @79
-mov dx, ttt+9
-mov ah, 0x9
-int 0x21
-@79:
-leave
-ret 0x4
-
+%define Header_arg_s (bp+4)
+	push bp
+	mov bp, sp
+	cmp byte [ttt], '*'
+	je strict short @71
+	mov dx, ttt+25
+	mov ah, 0x9
+	int 0x21
+	mov dx, ttt
+	mov ah, 0x9
+	int 0x21
+@71:	mov al, 0xb2  ; '▓'
+	mov cx, 0x3
+@72:	int 0x29
+	int 0x29
+	int 0x29
+	int 0x29
+	int 0x29
+	dec al
+	loop @72
+	push ds
+	lds si, [Header_arg_s]
+	lodsb
+	mov ah, 0x0
+	mov dx, ax
+	shr ax, 1
+	mov cx, 0x19
+	sub cx, ax
+	mov bx, cx
+	mov al, ' '
+	jcxz @74
+@75:	int 0x29
+	loop @75
+@74:	mov cx, [si-0x1]
+	mov ch, 0x0
+@76:	lodsb
+	int 0x29
+	loop @76
+	pop ds
+	mov cx, 0x32
+	sub cx, bx
+	sub cx, dx
+	mov al, ' '
+	jcxz @78
+@77:	int 0x29
+	loop @77
+@78:	mov al, 0xb0  ; '░'
+	mov cx, 0x3
+@73:	int 0x29
+	int 0x29
+	int 0x29
+	int 0x29
+	int 0x29
+	inc al
+	loop @73
+	cmp byte [ttt], '*'
+	je strict short @79
+	mov dx, ttt+9
+	mov ah, 0x9
+	int 0x21
+@79:	leave
+	ret 0x4
+	
 ; procedure PrintLine(w: word); assembler;
-%define PrintLine_arg_w (bp+4)
 func_PrintLine:
-push bp
-mov bp, sp
-mov al, [PrintLine_arg_w]
-int 0x29
-mov cx, 0x4e
-mov al, 0xc4  ; '─'
-@70:
-int 0x29
-loop @70
-mov al, [PrintLine_arg_w+1]
-int 0x29
-leave
-ret 0x2
+%define PrintLine_arg_w (bp+4)
+	push bp
+	mov bp, sp
+	mov al, [PrintLine_arg_w]
+	int 0x29
+	mov cx, 0x4e
+	mov al, 0xc4  ; '─'
+@70:	int 0x29
+	loop @70
+	mov al, [PrintLine_arg_w+1]
+	int 0x29
+	leave
+	ret 0x2
 
-times ((_code-$) & 15) nop  ; Align to paragraph (16) boundary with nop.
+_code_padding:
+	times ((_code-$) & 15) nop  ; Align to paragraph (16) boundary with nop.
 seg_delta equ (($-_code) >> 4) + 0x10
 
 _data:
