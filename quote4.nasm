@@ -49,7 +49,7 @@ cpu 286
 org 0x100
 
 _code:
-_start:
+_start:  ; begin { Főprogram }
 
 ; Increase DS and SS to accommodate for the total memory usage of 68 KiB (67
 ; KiB for code and data + 1 KiB for stack).
@@ -202,10 +202,6 @@ int 0x29
 mov al, 0xa
 int 0x29
 
-push ds  ; Header ki
-push strict word headermsg
-call func_Header
-
 ; Detect ANSI.SYS.
 ;
 ; From http://www.osfree.org/doku/en:docs:dos:api:int29 :
@@ -222,6 +218,11 @@ lx_12b:
 mov ax, ds
 nop  ; Maintains same file size as quote3.exe.orig.
 mov es, ax
+
+push ds  ; Header ki
+push strict word headermsg
+call func_Header
+
 mov al, [es:0x81]  ; First character of command-line arguments in PSP.  ; xch:=char(mem[PrefixSeg:$81]);
 cmp al, ' '
 jne strict short lx_13c  ; if xch=' ' then xch:=char(mem[PrefixSeg:$82]);
