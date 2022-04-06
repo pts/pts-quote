@@ -55,9 +55,9 @@ resize_ok:
 	add ax, 100h  ; 1 KiB of stack at the end of the 68 KiB.
 	mov ss, ax
 	
-main:	mov al, 0Dh  ; Writeln
+main:	mov al, 13  ; Writeln
 	int 29h
-	mov al, 0Ah
+	mov al, 10
 	int 29h
 	; Detect ANSI.SYS.
 	;
@@ -84,20 +84,20 @@ main:	mov al, 0Dh  ; Writeln
 	mov al, ' '
 @94:	and al, 255-32
 	mov [qqq_xch], al
-	; XReset(IdxFn);
+	; qqq_w:=XReset(IdxFn);
 	mov ax, 3D00h  ; Open for Read Only, C-Mode
 	mov dx, idxfn
 	int 21h
 	mov [qqq_han], ax
 	sbb ax, ax  ; AX:=0, ha OK ; AX:=$FFFF, ha hiba
-	mov word [idx], 0h  ; idx[0]:=0
-	cmp ax, strict word 0h  ; if (IOResult<>0) or (xch<>#0) then
+	mov word [idx], 0  ; idx[0]:=0
+	cmp ax, strict word 0  ; if (IOResult<>0) or (xch<>#0) then
 	jne strict short @90
-	cmp byte [qqq_xch], 0h
+	cmp byte [qqq_xch], 0
 	jne strict short @90
 	jmp strict near lls
-	; XReset(TXTFN);
-@90:	mov ax, 3D00h  ; Open for Read Only, C-Mode
+@90:	; XReset(TXTFN);
+	mov ax, 3D00h  ; Open for Read Only, C-Mode
 	mov dx, txtfn
 	int 21h
 	mov [qqq_han], ax
@@ -122,11 +122,10 @@ main:	mov al, 0Dh  ; Writeln
 	mov [qqq_l+2], ax
 	mov [qqq_oldl], ax  ; oldl:=0
 	mov [qqq_oldl+2], ax
-	mov word [qqq_a], 1h
+	mov word [qqq_a], 1
 	mov [buf+full], ax  ; Make sure we don't detect CRLF+CRLF at the beginning.
-	
-	; repeat
-@81:	call func_GetNext
+@81:	; repeat
+	call func_GetNext
 	mov si, buf-4
 	add si, [qqq_b]
 	cmp word [si], 0A0Dh  ; CRLF
@@ -141,7 +140,7 @@ main:	mov al, 0Dh  ; Writeln
 	add di, [qqq_a]
 	add di, [qqq_a]
 	mov [di], ax
-	mov [di+2h], dx
+	mov [di+2], dx
 	inc word [qqq_a]
 	mov ax, [qqq_l]  ;    oldl:=l
 	mov [qqq_oldl], ax
@@ -169,18 +168,18 @@ main:	mov al, 0Dh  ; Writeln
 	xor dx, dx
 @83:	lodsw
 	stosb
-	cmp ax, 0F0h
+	cmp ax, 240
 	jb strict short @84
 	dec di
-	rol ax, byte 8h
-	or ax, 0F0h
+	rol ax, byte 8
+	or ax, 240  ; 11110000b
 	stosw
 @84:	loop @83
 	sub di, buf  ; DI := number of compressed bytes to write.
 	
 	; XRewrite(IDXFN);
 	mov ah, 3Ch  ; Create file
-	mov cx, 0h
+	mov cx, 0
 	mov dx, idxfn
 	int 21h
 	jnc strict short @91
@@ -218,17 +217,17 @@ lls:  ; end else begin
 	mov bx, [qqq_han]
 	int 21h
 	
-	mov dx, 1h
+	mov dx, 1
 	mov si, buf
 	mov di, idx+2
 @85:	lodsb
-	mov ah, 0h
+	mov ah, 0
 	stosw
-	cmp al, 0F0h
+	cmp al, 240
 	jb strict short @86
 	dec di
 	dec di
-	and al, 0Fh
+	and al, 15
 	mov ah, al
 	lodsb
 	stosw
@@ -292,12 +291,13 @@ llc:	cmp byte [qqq_xch], 'C'
 	std
 @97:	lodsw  ; L:=IDX[W]+IDX[W-1]+...+IDX[1]
 	add [qqq_l], ax
-	adc word [qqq_l+2], byte +0h
+	adc word [qqq_l+2], byte 0
 	cmp si, idx
 	jne strict short @97
 	cld
 	
-after_random:	push strict word 0BFDAh  ; '┌┐'  ; Keret ki
+after_random:
+	push strict word 0BFDAh  ; '┌┐'  ; Keret ki
 	call func_PrintLine
 	
 lld:	; seek(f, qqq_l);
@@ -321,7 +321,7 @@ lld:	; seek(f, qqq_l);
 	mov si, var_s+1
 @12:	or bh, bh
 	jnz strict short @13
-	cmp byte [bx+si], 0Dh
+	cmp byte [si+bx], 13
 	je strict short @11
 	inc bx
 	jmp strict short @12
@@ -331,7 +331,7 @@ lld:	; seek(f, qqq_l);
 	inc bx
 	inc bx
 	add [qqq_l], bx  ; inc(l,length(s)+2);
-	adc word [qqq_l+2], byte +0h
+	adc word [qqq_l+2], byte 0
 	
 	; START OF ALIGN
 	;
@@ -344,31 +344,31 @@ lld:	; seek(f, qqq_l);
 	mov si, var_s
 	mov [qqq_w], si
 	lodsb
-	cmp al, 0h
+	cmp al, 0
 	jne strict short @d
-	mov al, 1h
+	mov al, 1
 	mov ds, cx
 	jmp strict near @9  ; Empty string: do nothing but restore original CS
-@d:	mov byte [qqq_ansich], 0h  ; AnsiCh is 0 by default
+@d:	mov byte [qqq_ansich], 0  ; AnsiCh is 0 by default
 	cmp byte [si], '-'
 	jne strict short @c
-	mov al, [si+1h]
+	mov al, [si+1]
 	mov [qqq_ansich], al
 	add word [qqq_w], byte 2  ; If not AnsiCh<>0 the 1st 2 char won't be in the str
-	mov al, [si-1h]
+	mov al, [si-1]
 	dec ax
 	dec ax
 	mov [si+1h], al
-@c:	mov ah, 0h
+@c:	mov ah, 0
 	mov ds, cx
-	mov bx, 4Eh
-	cmp byte [qqq_ansich], 0h
+	mov bx, 78
+	cmp byte [qqq_ansich], 0
 	jne strict short @a
-	mov al, 0h
-	mov bx, 0h
+	mov al, 0
+	mov bx, 0
 @a:	cmp byte [qqq_ansich], '&'
 	jne strict short @b
-	mov bx, 27h
+	mov bx, 39
 	shr ax, 1
 @b:	sub bx, ax
 	mov [qqq_before], bx
@@ -376,21 +376,20 @@ lld:	; seek(f, qqq_l);
 	int 29h
 	cmp byte [ttt], '*'  ; Put out an ANSI EscSeq to set color if needed
 	je strict short @6
-	mov ah, 9h
+	mov ah, 9
 	mov al, [qqq_ansich]
-	cmp al, 0h
+	cmp al, 0
 	je strict short @6
-	add al, 0Ah
+	add al, 10
 	mov [ttt+17+3], al
 	mov dx, ttt+17
 	int 21h
 	mov byte [qqq_ansich], 0h
-@6:	
-	; Display the string "s" with "before" spaces in front of it
+@6:	; Display the string "s" with "before" spaces in front of it
 	mov si, [qqq_w]
 	lodsb
 	mov cl, al
-	mov ch, 0h
+	mov ch, 0
 	mov dx, cx
 	jcxz @1
 	mov cx, [qqq_before]
@@ -403,7 +402,7 @@ lld:	; seek(f, qqq_l);
 @3:	lodsb
 	int 29h
 	loop @3
-@8:	mov cx, 4Eh
+@8:	mov cx, 78
 	sub cx, [qqq_before]
 	sub cx, dx
 	jcxz @1
@@ -412,12 +411,12 @@ lld:	; seek(f, qqq_l);
 	loop @4
 @1:	cmp byte [ttt], '*'  ; Restore original color via ANSI EscSeq if needed
 	je strict short @7
-	mov ah, 9h
+	mov ah, 9
 	mov dx, ttt+25
 	int 21h
 @7:	mov al, 0B3h  ; '│'  ; The line ends by this, too
 	int 29h
-	mov al, 0h ; The return value is FALSE
+	mov al, 0 ; The return value is FALSE
 	; END OF ALIGN
 	
 @9:	or al, al
@@ -452,15 +451,15 @@ func_GetNext:
 	jnc strict short @87
 	mov ax, 4CF1h  ; Abort on read error.
 	int 21h
-@87:	mov word [qqq_b], 4h  ; endif
+@87:	mov word [qqq_b], 4  ; endif
 @88:	mov bx, [qqq_b]  ; GetNext:=Buf[qqq_B];
 	mov al, [bx+buf]
 	inc word [qqq_b]
-	add word [qqq_l], byte +1h  ; inc(qqq_l);
-	adc word [qqq_l+2], byte +0h
+	add word [qqq_l], byte 1  ; inc(qqq_l);
+	adc word [qqq_l+2], byte 0
 	ret
 	
-; procedure Header(const s: near OpenString); assembler;
+; procedure Header(const s: OpenString); assembler;
 func_Header:
 %define Header_arg_s (bp+4)
 	push bp
@@ -468,13 +467,13 @@ func_Header:
 	cmp byte [ttt], '*'
 	je strict short @71
 	mov dx, ttt+25
-	mov ah, 9h
+	mov ah, 9
 	int 21h
 	mov dx, ttt
-	mov ah, 9h
+	mov ah, 9
 	int 21h
 @71:	mov al, 0B2h  ; '▓'
-	mov cx, 3h
+	mov cx, 3
 @72:	int 29h
 	int 29h
 	int 29h
@@ -484,22 +483,22 @@ func_Header:
 	loop @72
 	mov si, [Header_arg_s]
 	lodsb
-	mov ah, 0h
+	mov ah, 0
 	mov dx, ax
 	shr ax, 1
-	mov cx, 19h
+	mov cx, 25
 	sub cx, ax
 	mov bx, cx
 	mov al, ' '
 	jcxz @74
 @75:	int 29h
 	loop @75
-@74:	mov cx, [si-1h]
+@74:	mov cx, [si-1]
 	mov ch, 0h
 @76:	lodsb
 	int 29h
 	loop @76
-	mov cx, 32h
+	mov cx, 50
 	sub cx, bx
 	sub cx, dx
 	mov al, ' '
@@ -507,7 +506,7 @@ func_Header:
 @77:	int 29h
 	loop @77
 @78:	mov al, 0B0h  ; '░'
-	mov cx, 3h
+	mov cx, 3
 @73:	int 29h
 	int 29h
 	int 29h
@@ -530,7 +529,7 @@ func_PrintLine:
 	mov bp, sp
 	mov al, [PrintLine_arg_w]
 	int 29h
-	mov cx, 4Eh
+	mov cx, 78
 	mov al, 0C4h  ; '─'
 @70:	int 29h
 	loop @70

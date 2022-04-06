@@ -274,7 +274,7 @@ begin { Főprogram }
 	jb @84
 	dec di
 	rol ax, 8
-	or ax, 11110000b
+	or ax, 240  { 11110000b }
 	stosw
 @84:    loop @83
 	mov qqq.a, di
