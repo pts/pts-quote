@@ -183,7 +183,8 @@ main:	mov al, 13  ; Writeln
 	mov dx, idxfn
 	int 21h
 	jnc strict short @91
-fatal_error:	mov ax, 4CF0h  ; Fatal error
+fatal_error:
+	mov ax, 4CF0h  ; Fatal error
 	int 21h
 	; blockwrite(f, buf, compressed_size);
 @91:	mov ah, 40h
@@ -211,7 +212,7 @@ lls:  ; end else begin
 	mov cx, full+4
 	mov dx, buf
 	int 21h
-	mov cx, ax  ; Save number of (compressed) bytes read to cx, for below.
+	mov cx, ax  ; Save number of (compressed) bytes read to CX, for below.
 	; close(f);
 	mov ah, 3Eh
 	mov bx, [qqq_han]
@@ -254,7 +255,7 @@ llc:	cmp byte [qqq_xch], 'C'
 	dec si  ; SI := Number of quotes.
 	
 	; DX:=random(SI);  Then 0 <= SI < DX.
-	; This code may ruin AX, BX, CX, SI, DI, BP and FLAGS.
+	; This code may clobber AX, BX, CX, SI, DI, BP and flags.
 	;
 	; This code generates a 32-bit random number n in a register pair, then computes
 	; DX := (n * SI) >> 32 as the random value.
@@ -309,7 +310,7 @@ lld:	; seek(f, qqq_l);
 	; blockread(f, s[1], 255, qqq_w);
 	mov ah, 3Fh
 	mov bx, [qqq_han]
-	mov cx, 0FFh
+	mov cx, 255
 	mov dx, var_s+1
 	int 21h
 	mov [qqq_w], ax
@@ -427,7 +428,7 @@ lle:	push strict word 0D9C0h  ; '└┘'
 	call func_PrintLine
 	push strict word footermsg
 	call func_Header
-	mov ah, 3Eh  ; Close(F);
+	mov ah, 3Eh  ; close(F);
 	mov bx, [qqq_han]
 	int 21h
 llf:	mov ax, 4C00h  ; EXIT_SUCCESS.

@@ -4,7 +4,7 @@
 ; (C) 1996--2022-3-27 by EplPáj of PotterSoftware, Hungary
 ; translation to NASM on 2022-3-27
 ;
-; Compile it with NASM 0.98.39 .. 2.13.2 ...:
+; Compile it with NASM 0.98.39 .. 2.13.02 ...:
 ;
 ;   $ nasm -O0 -f bin -o quote4n.com quote4.nasm
 ;
@@ -167,7 +167,8 @@ main:	mov al, 13  ; Writeln
 	cmp [qqq_l+2], dx
 	jne strict short @81
 	
-	; Close(f);
+	; Now qqq.a == (number of quotes) + 1.
+	; close(f);
 	mov ah, 3Eh
 	mov bx, [qqq_han]
 	int 21h
@@ -251,7 +252,7 @@ lls:  ; end else begin
 	dec cx
 @86:	inc dx
 	loop @85
-	mov [qqq_a], dx
+	mov [qqq_a], dx  ; qqq.a := (number of quotes) + 1.
 llc:	cmp byte [qqq_xch], 'C'
 	jne strict short @ne2
 	jmp strict near llf
@@ -264,6 +265,7 @@ llc:	cmp byte [qqq_xch], 'C'
 	sbb ax, ax
 	
 	; qqq_w:=random(qqq_a+1);  Then 0 <= qqq_w < qqq_a + 1.
+	; This code may clobber AX, BX, CX, SI, DI, BP and flags.
 	;
 	; According to https://stanislavs.org/helppc/bios_data_area.html , dword [40h:6Ch]
 	; is the daily timer counter: equal to zero at midnight; incremented by INT 8;
@@ -435,7 +437,7 @@ lle:	push strict word 0D9C0h  ; '└┘'
 	push ds
 	push strict word footermsg
 	call func_Header
-	mov ah, 3Eh  ; Close(F);
+	mov ah, 3Eh  ; close(F);
 	mov bx, [qqq_han]
 	int 21h
 llf:	mov ax, 4C00h  ; EXIT_SUCCESS.

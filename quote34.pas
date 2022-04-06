@@ -347,7 +347,7 @@ llc:    cmp qqq.xch, 'C'
 	dec si  { SI := Number of quotes. }
 
 	{ DX:=random(SI);  Then 0 <= SI < DX.
-	  This code may ruin AX, BX, CX, SI, DI, BP and FLAGS.
+	  This code may ruin AX, BX, CX, SI, DI, BP and flags.
 
 	  This code generates a 32-bit random number n in a register pair, then computes
 	  DX := (n * SI) >> 32 as the random value.
