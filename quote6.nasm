@@ -1,6 +1,6 @@
 ; -*- coding: utf-8 -*-
 ;
-; quote.nasm: PotterSoftware Quote Displayer V2.62 (NASM source code)
+; quote6.nasm: PotterSoftware Quote Displayer V2.62 (NASM source code)
 ; (C) 22 September 1996 by EplPáj of PotterSoftware, Hungary
 ; translation to NASM on 2022-03-18
 ;
@@ -18,7 +18,7 @@
 ; This source file is for archival purposes only.
 ; Bugfixes and features shouldn't be added to this file, but to quote63.nasm.
 ;
-;I read from QUOTE.TXT, and I read/write/keep QUOTE.IDX in the current dir.
+;I read from quote.txt, and I read/write/keep quote.idx in the current dir.
 ;
 ;If you do not specify the command line parameter, first I check for .idx If
 ;I can't find it, I generate it. Then using up the .idx I display a random
@@ -68,7 +68,7 @@
 ; * 0x100... (at most 3840 bytes): .com file (code and data) loaded by DOS.
 ;   Entry point is at the beginning, has label _start for convenience.
 ; * 0x1000...0x1800 (2048 bytes): Variable named buffer, file preread buffer.
-;   Continues and overlaps idxc and index.
+;   When reading our quote, it continues and overlaps idxchw, idxc and index.
 ; * 0x1800...0x1802 (2 bytes): Variable named idxc, contains total number of
 ;   quotes. First 2 bytes of the quote.idx file.
 ; * 0x1802...0xf402 (56320 bytes): Array variable named index, index entries:
@@ -190,12 +190,12 @@ cpu 286  ; Some instructions below (such as higher-than-1 bit shifts) need 286.
 ;=======Size-measuring constants.
 	_bss equ 1000h
 	buflen equ 2048
-	idxlen equ 55*1024
-	quote_max equ 4096
+	idxlen equ 55*1024  ; 55 KiB.
+	quote_max equ 4096  ; All quotes must be shorter than this. For compatibility with earlier versions.
 
 ;=======Uninitialized data (_bss).
-%define	buffer word[_bss]		;quote.txt file preread buffer.
-%define offset_buffer _bss		;buffer overlaps idxc and index when reading our quote.
+%define	buffer word[_bss]		;quote.txt file preread buffer. It overlaps idxc and index when reading our quote.
+%define offset_buffer _bss
 %define	idxc   word[_bss+buflen]	;Total number of quotes.
 %define offset_idxc (_bss+buflen)
 %define	index  word[_bss+buflen+2]	;Index table: 1 byte for each 1024-byte block of quote.txt.
@@ -212,27 +212,27 @@ _start:
 	cmp param, 2
 	je strict short l18
 	mov ax, 0E0Dh
-	int 10h				;BH=0, Writeln
+	int 10h				;BH=0, Writeln.
 	mov al, 00Ah
 	int 10h
-	mov si, headermsg			;Fejléc kiírása
-	call header
+	mov si, headermsg
+	call header			;Print blue header message.
 
 l18:	mov ax, 3D00h
 	mov dx, txtfn
-	int 21h				;Open quote.txt
+	int 21h				;Open .txt file quote.txt.
 	jnc strict short nc1
 	call error
-nc1:	push ax				;Save file handle
+nc1:	push ax				;Save .txt filehandle.
 
 	mov ax, 3D00h
 	mov dx, idxfn
-	int 21h
+	int 21h				;Open index file quote.idx.
 	mov dl, param
 	adc dl, 0
 	jnz strict short gen
 	
-;=======Reads the index file quote.txt.
+;=======Reads the index file quote.idx.
 	a86_mov bx, ax
 	mov ah, 3Fh
 	mov cx, idxlen+2
@@ -240,11 +240,11 @@ nc1:	push ax				;Save file handle
 	int 21h
 	mov ah, 3Eh
 	int 21h
-	pop bx				;Restore .txt handle
+	pop bx				;Restore .txt filehandle.
 	jmp l5
 
 ;=======Starts generating the index file quote.idx.
-gen:	pop bx				;Get handle of quote.txt.
+gen:	pop bx				;Restore .txt filehandle.
 	mov si, offset_buffer
 	mov di, offset_index
 	mov bp, 0A0Dh
@@ -257,7 +257,7 @@ l2:	mov ah, 3Fh			;Read next 1024-byte block.
 	int 21h
 	a86_mov cx, ax
 	jcxz l1
-	mov al, 0
+	mov al, 0			;Number of quotes in this block.
 
 l4:	cmp [si], bp
 	jne strict short l3
@@ -279,46 +279,46 @@ l3:	inc si
 	mov si, offset_buffer
 	cmp di, idxlen
 	jne strict short l2
-	push di				;Push error code.
+	push di				;Push error code. Error: quote.txt too long, index full.
 
-error:  mov al, 7			;General error message
-	int 29h				;Beep
+error:  mov al, 7			;General error message.
+	int 29h				;Beep.
 	pop ax				;Get code address of error, and
 	mov ah, 4Ch			;give it back as errorlevel.
-	int 21h
+	int 21h				;Exit to DOS.
 
 l1:	cmp param, 5
 	je strict short l19
-	push bx				;File handle elmentése
+	push bx				;Save .txt filehandle.
 	mov ah, 3Ch
-	a86_xor cx, cx			;Attribútumot nem kap
+	a86_xor cx, cx			;Creates with attributes = 0.
 	mov dx, idxfn
-	int 21h				;Open
+	int 21h				;Open index file quote.idx for writing.
 	jnc strict short nc2
 	call error
 nc2:	a86_mov bx, ax
 	mov ah, 40h
-	lea cx, [di-offset_idxc]	;CX:=DI-ofs(index)=indextábla_hossza
+	lea cx, [di-offset_idxc]	;CX := DI-ofs(index) == sizeof_index.
 	mov dx, offset_idxc
-	int 21h				;Write
+	int 21h				;Write to index file.
 	mov ah, 3Eh
-	int 21h				;Close .idx
-	pop bx				;Most: BX=handle of quote.txt
+	int 21h				;Close index file.
+	pop bx				;Restore .txt filehandle.
 l19:	cmp param, 2
 	jne strict short ne4
-	ret				;Exit with int 20h.
+	ret				;Exit to DOS with int 20h.
 ne4:
 
 ;=======Continues after quote.idx has been read or generated.
 l5:
 
-;=======Generates 32-bit random number in DX:AX. Clobbers flags, BP, BX, CX.
-	mov ah, 0
-	int 1Ah				;Get time-random seed in CX:DX
-	push bx
+;=======Generates 32-bit random seed in DX:AX. Clobbers flags, BP, BX, CX.
+	mov ah, 0			;Read system clock counter to CX:DX.
+	int 1Ah
+	push bx				;Save handle of quote.txt.
 	a86_xor bp, bp
 	mov ax, cs
-	a86_add ax, dx			;Modify seed
+	a86_add ax, dx			;Modify seed.
 	a86_mov bx, ax
 	mov dx, 8405h
 	mul dx
@@ -334,7 +334,7 @@ l5:
 	a86_adc dx, bp			;(DX:AX) += (0, 1). BP is 0.
 	; Now DX:AX is a 32-bit random number.
 
-;=======Generates random DX:=random(idxc) from random DX:AX.
+;=======Generates random DX:=random(idxc) from random seed DX:AX.
 ;       Assumes BP==0. Clobbers flags, AX, BX.
 	a86_mov bx, dx
 	mul idxc
@@ -345,7 +345,7 @@ l5:
 	a86_adc dx, bp			;DX:=random(idxc). BP is 0.
 
 ;=======Finds block index (as SI-offset_index) of the quote with index DX.
-	pop bx
+	pop bx				;Restore handle of quote.txt.
 	mov si, offset_index
 	mov ah, 0
 l7:	lodsb
@@ -355,12 +355,12 @@ l7:	lodsb
 	jmp strict short l7
 
 ;=======Seeks to the block of our quote with index DX.
-l6:	sub si, offset_index+2		;Most: SI=hányadik 1024 byte-os szelet
-	push dx				;Most: AX=a szelet ?-ik idézete
+l6:	sub si, offset_index+2		;SI := 1024-byte block index.
+	push dx				;DX = quote index within block.
 	mov bp, 0A0Dh
 	mov ax, 4200h
 	jns strict short l8
-	a86_xor dx, dx
+	a86_xor dx, dx			;Our quote is in block 0, seeks to the beginning.
 	a86_xor cx, cx
 	int 21h
 	mov dx, offset_buffer+1024
@@ -371,21 +371,21 @@ l8:	a86_mov dx, si
 	shl dx, 10
 	a86_mov cx, si
 	shr cx, 6
-	int 21h
+	int 21h				;Seek to 1024 * SI, to the beginning of the previous block.
 	mov dx, offset_buffer
 
 ;=======Reads the blocks containing our quote.
 l20:	mov ah, 3Fh
-	mov cx, quote_max		;Ennyi tuti, hogy elég lesz.
+	mov cx, quote_max		;Reads this many bytes.
 	; Bug: this trailing CRLF + CRLF (bp + bp) should be put after
 	; read read_size (in ax above), not after quote_max bytes.
-	mov [offset_buffer+quote_max], bp	;Biztos, ami biztos, idézet vége
-	mov [offset_buffer+quote_max+2], bp	;jelet teszünk a buffer végére.
-	int 21h				;Olvasás
+	mov [offset_buffer+quote_max], bp	;Append sentinel CRLF + CRLF.
+	mov [offset_buffer+quote_max+2], bp
+	int 21h				;Read from .txt file.
 	mov ah, 3Eh
-	int 21h				;Close .txt
+	int 21h				;Close .txt file.
 
-	pop ax
+	pop ax				;AX := quote index within block.
 	mov di, offset_buffer+1020-1
 l21:	inc di
 	cmp [di], bp
@@ -394,32 +394,33 @@ l21:	inc di
 	jne strict short l21
 	dec ax
 	jns strict short l21
-	add di, byte 4			;DI:=offset(idézet)
+	add di, byte 4			;DI:=offset(our_quote).
 
-;=======Kiírjuk a kiválasztott idézetet
-	mov ax, 00EDAh			;Felső keret
-	mov bx, 0BFh
-	call pline
+;=======Prints our quote.
+	mov ax, 00EDAh
+	mov bx, 0BFh			;'┌┐'.
+	call pline			;Draw the top side of the frame.
 
 lld:    mov cx, 79
-	mov al, 13			;CR
+	mov al, 13			;CR.
 	lea si, [di-1]
-	repnz scasb			;Seek CR
+	repnz scasb			;Seek CR using DI.
 	jz strict short z5
 	call error			;Line too long.
-z5:	sub cx, byte 79
+z5:	sub cx, byte 79			;Now: byte[di-1] == 10 (LF).
 	inc cx				;Replacing inc+neg by not wouldn't change ZF.
-	neg cx				;Most CX=sor hossza, CR nélkül
+	neg cx				;CX := length(line); without CR.
 	jnz strict short y91
 
-lle:	mov ax, 00EC0h			;Üres sor=> Idézet vége, kilépés
-	mov bx, 0D9h			;└┘
-	call pline
+;=======Empty line: prints foooter and exits.
+lle:	mov ax, 00EC0h
+	mov bx, 0D9h			;'└┘'.
+	call pline			;Draw the bottom side of the frame.
 	mov si, footermsg
-	call header
+	call header			;Print blue footer message.
 	mov bx, 7
 	call fillc
-	ret				;Exit with int 20h.
+	ret				;Exit to DOS with int 20h.
 
 y91:    inc di
 	mov [si], cl			;Set length of Pascal string.
@@ -430,14 +431,14 @@ y91:    inc di
 	; #0=Left '-'=Right '&'=Center alignment.
 	mov qqqqw, si
 	lodsb				;AL:=length(s), AL<>0.
-	mov dl, 0			;AnsiCh=dl is 0 by default
+	mov dl, 0			;AnsiCh=dl is 0 by default.
 	cmp byte [si], '-'
 	jne strict short yc
-	add qqqqw, byte 2		;Ha AnsiCh<>0 => s[1,2] kihagyása
+	add qqqqw, byte 2		;If AnsiCh!=0, skip first 2 characters (-- or -&).
 	dec ax
 	dec ax
 	a86_mov dx, ax
-	xchg [si+1], dl			;length odébbmásolása, új AnsiCh
+	xchg [si+1], dl			;Copy Pascal string length to the next byte, get new AnsiCh.
 yc:     mov ah, 0
 	mov bx, 78
 	mov cx, 15
@@ -454,13 +455,14 @@ ya:     cmp dl, '&'
 	mov cx, 10
 yb:     a86_sub bx, ax
 	mov qqqqbefore, bx
-	mov ax, 0Eh*256+0b3h		;'│' Start the line
+	mov ax, 0Eh*256+0b3h		;'│' Start the line.
 	mov bh, 0
 	int 10h
 	a86_mov bx, cx
 	mov cx, 78
 	call filld
-	; Display the Pascal string at qqqqw prefixed by qqqqbefore spaces.
+
+	; Displays the Pascal string at qqqqw prefixed by qqqqbefore spaces.
 	mov si, qqqqw
 	lodsb				;Get length of Pascal string.
 	a86_mov cl, al
@@ -488,16 +490,12 @@ y7:     mov ax, 0Eh*256+0b3h		;'│' The line ends by this, too.
 	int 10h
 	jmp strict near lld		;Display next line of our quote.
 
-;(3)
-;Itt kerülnek leírásra a meghívott függvények.
-;
-
-header: 	                        ;Fejléc & Lábléc kiíró
-					;Hívás: string absoulute DS:SI
-y71:    mov bx, 16
+;=======Prints colorful header or footer line (func_Header).
+;	Input is Pascal string at SI.
+header:	mov bx, 16
 	call fillc
-	mov ax, 0Eh*256+0b2h		;'▓'
-	mov byte [ploop2], 48h		;048h: DEC AX
+	mov ax, 0Eh*256+0b2h		;'▓'.
+	mov byte [ploop2], 48h		;Set to `dec ax' (48h).
 	call ploop
 	lodsb
 	mov ah, 0
@@ -523,18 +521,22 @@ y76:    lodsb
 	jcxz y78
 y77:    int 10h
 	loop y77
-y78:    mov al, 0b0h			;'░'
-	mov byte [ploop2], 40h		;40h: INC AX
+y78:    mov al, 0b0h			;'░'.
+	mov byte [ploop2], 40h		;Set to `inc ax' (40h).
 	call ploop
-	mov bx, 7			;call fillc; ret Meg lett spórolva
-fillc:	mov cx, 80
-filld:	mov ax, 920h			;Fekete hátterű üres sort hagyunk.
+	mov bx, 7
+	;call fillc			;Optimized away.
+	;ret				;Optimized away.
+fillc:	mov cx, 80			;Print 80 spaces with attributes in BX.
+filld:	mov ax, 920h			;Print CX spaces with attributes in BX.
 	int 10h
 	ret
 
-pline:	int 10h				;Hívás: AH=0Eh, AL=1. ch, BX=2. ch
+;=======Prints a top or bottom border line (func_PrintLine).
+;	Input: AL=left corner byte; BL=right corner byte; AH=0Eh; BH=0.
+pline:	int 10h
 	mov cx, 78
-	mov al, 196			;'─'
+	mov al, 196			;'─'.
 y70:    int 10h
 	loop y70
 	a86_mov al, bl
@@ -547,7 +549,7 @@ y72:    int 10h
 	int 10h
 	int 10h
 	int 10h
-ploop2:	dec ax
+ploop2:	dec ax				;Self-modifying code will modify this to `dec ax' or `inc ax'.
 	loop y72
 	ret
 
