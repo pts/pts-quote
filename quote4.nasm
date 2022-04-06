@@ -68,7 +68,6 @@ add ax, 0x100  ; 1 KiB of stack at the end of the 68 KiB.
 mov ss, ax
 
 jmp strict near main
-times 0x40-($-_code) nop  ; Maintains same file size as quote3.exe.orig.
 
 ; function GetNext: char; assembler;
 func_GetNext:
@@ -196,9 +195,6 @@ mov al, [PrintLine_arg_w+1]
 int 0x29
 leave
 ret 0x2
-
-main_start_tpc:
-times 8 nop  ; Maintains same file size as quote3.exe.orig.
 
 main:  ; begin { Főprogram }
 mov al, 0xd  ; Writeln
@@ -615,22 +611,15 @@ exit:
 mov ax, 0x4c00  ; EXIT_SUCCESS.
 int 0x21  ; Exit to DOS.
 
-main_end_tpc:
-times 8-($-exit) nop  ; Maintains same file size as quote3.exe.orig.
-
-stdlib_tpc:
-times 1450 nop  ; Maintains same file size as quote3.exe.orig.
-
 times ((_code-$) & 15) nop  ; Align to paragraph (16) boundary with nop.
 seg_delta equ (($-_code) >> 4) + 0x10
 
 _data:
-zerow_tpc_in_data: dw 0
 ttt_in_data: db 27, '[44;30m$', 27, '[0m', 27, '[K$', 27, '[30;1m$', 27, '[0m$'
 ttt equ ttt_in_data-_data  ; Because of seg_delta.
-txtfn_in_data: db 'QUOTE.TXT', 0, 0, 0, 0
+txtfn_in_data: db 'QUOTE.TXT', 0
 txtfn equ txtfn_in_data-_data  ; Because of seg_delta.
-idxfn_in_data: db 'QUOTE.IDX', 0, 0, 0, 0
+idxfn_in_data: db 'QUOTE.IDX', 0
 idxfn equ idxfn_in_data-_data  ; Because of seg_delta.
 ; Must be long enough (23 bytes) for overlap with qqq_... .
 headermsg_in_data: db 35, 'PotterSoftware Quote Displayer 2.41'
@@ -641,10 +630,9 @@ _data_end:
 
 ; _bss: (Uninitialized data.)
 full equ 16384  ; Just a size.
-_bss equ _data_end-_data+79 ; Maintains same memory layout as quote3.exe.orig.
-buf equ _bss  ; array[0..full+4] of char;
+buf equ _data_end+((_data_end-$$)&1)-_data  ; array[0..full+4-1] of char;  Aligned.
 var_s equ buf  ; string; overlaps buf
-idx equ buf+full+4+1  ; array[0..24160] of word;
+idx equ buf+full+4+((buf+_data+full+4-$$)&1)  ; array[0..24160] of word;  ; Aligned.
 qqq_a equ headermsg  ; word; overlaps headermsg.
 qqq_b equ qqq_a+2  ; word; overlaps headermsg.
 qqq_w equ qqq_b+2  ; word; overlaps headermsg.
@@ -655,6 +643,3 @@ qqq_xch equ qqq_oldl+4  ; char; overlaps headermsg. Contains the command-line ar
 qqq_before equ qqq_xch+1  ; word; overlaps headermsg, Not aligned.
 qqq_ansich equ qqq_before+2  ; char; overlaps headermsg.
 qqq_han equ qqq_ansich+1  ; word; overlaps headermsg. Filehandle.
-
-_data_tpc:
-times 85 nop  ; Maintains same file size as quote3.exe.orig.
