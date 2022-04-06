@@ -67,136 +67,6 @@ mov ax, ss
 add ax, 0x100  ; 1 KiB of stack at the end of the 68 KiB.
 mov ss, ax
 
-jmp strict near main
-
-; function GetNext: char; assembler;
-func_GetNext:
-cmp word [qqq_b], full+4  ; if qqq_b=full+4 then begin
-jne strict short lx_33
-
-; move(src:=buf[full], dst:=buf[0], 4);
-  ; BUG: This code is completely buggy. It should be:
-  ; mov si, buf + full
-  ; mov di, buf
-  ; movsw
-  ; movsw
-  xor di, buf
-  add di, full
-  mov ax, [buf]
-  stosw
-  mov ax, [buf+2]
-  stosw
-; blockread(f, buf[4], full, qqq_w);
-mov ah, 0x3f
-mov bx, [qqq_han]
-mov cx, full
-mov dx, buf+4
-int 0x21
-jnz strict short lx_2d  ; BUG: should be jnc.
-mov ax, 0x4cf1  ; Abort on read error.
-int 0x21
-lx_2d:
-mov word [qqq_b], 0x4  ; endif
-lx_33:
-mov bx, [qqq_b]  ; GetNext:=Buf[qqq_B];
-mov al, [bx+buf]
-inc word [qqq_b]
-add word [qqq_l], byte +0x1  ; inc(qqq_l);
-adc word [qqq_l+2], byte +0x0
-ret
-
-; procedure Header(const s: OpenString); assembler;
-%define Header_arg_s (bp+4)
-func_Header:
-push bp
-mov bp, sp
-cmp byte [ttt], '*'
-je strict short lx_69
-mov dx, ttt+25
-mov ah, 0x9
-int 0x21
-mov dx, ttt
-mov ah, 0x9
-int 0x21
-lx_69:
-mov al, 0xb2  ; '▓'
-mov cx, 0x3
-lx_6e:
-int 0x29
-int 0x29
-int 0x29
-int 0x29
-int 0x29
-dec al
-loop lx_6e
-push ds
-lds si, [Header_arg_s]
-lodsb
-mov ah, 0x0
-mov dx, ax
-shr ax, 1
-mov cx, 0x19
-sub cx, ax
-mov bx, cx
-mov al, ' '
-jcxz lx_96
-lx_92:
-int 0x29
-loop lx_92
-lx_96:
-mov cx, [si-0x1]
-mov ch, 0x0
-lx_9b:
-lodsb
-int 0x29
-loop lx_9b
-pop ds
-mov cx, 0x32
-sub cx, bx
-sub cx, dx
-mov al, ' '
-jcxz lx_b0
-lx_ac:
-int 0x29
-loop lx_ac
-lx_b0:
-mov al, 0xb0  ; '░'
-mov cx, 0x3
-lx_b5:
-int 0x29
-int 0x29
-int 0x29
-int 0x29
-int 0x29
-inc al
-loop lx_b5
-cmp byte [ttt], '*'
-je strict short lx_d1
-mov dx, ttt+9
-mov ah, 0x9
-int 0x21
-lx_d1:
-leave
-ret 0x4
-
-; procedure PrintLine(w: word); assembler;
-%define PrintLine_arg_w (bp+4)
-func_PrintLine:
-push bp
-mov bp, sp
-mov al, [PrintLine_arg_w]
-int 0x29
-mov cx, 0x4e
-mov al, 0xc4  ; '─'
-lx_e9:
-int 0x29
-loop lx_e9
-mov al, [PrintLine_arg_w+1]
-int 0x29
-leave
-ret 0x2
-
-main:  ; begin { Főprogram }
 mov al, 0xd  ; Writeln
 int 0x29
 mov al, 0xa
@@ -605,6 +475,133 @@ int 0x21
 exit:
 mov ax, 0x4c00  ; EXIT_SUCCESS.
 int 0x21  ; Exit to DOS.
+
+; function GetNext: char; assembler;
+func_GetNext:
+cmp word [qqq_b], full+4  ; if qqq_b=full+4 then begin
+jne strict short lx_33
+
+; move(src:=buf[full], dst:=buf[0], 4);
+  ; BUG: This code is completely buggy. It should be:
+  ; mov si, buf + full
+  ; mov di, buf
+  ; movsw
+  ; movsw
+  xor di, buf
+  add di, full
+  mov ax, [buf]
+  stosw
+  mov ax, [buf+2]
+  stosw
+; blockread(f, buf[4], full, qqq_w);
+mov ah, 0x3f
+mov bx, [qqq_han]
+mov cx, full
+mov dx, buf+4
+int 0x21
+jnz strict short lx_2d  ; BUG: should be jnc.
+mov ax, 0x4cf1  ; Abort on read error.
+int 0x21
+lx_2d:
+mov word [qqq_b], 0x4  ; endif
+lx_33:
+mov bx, [qqq_b]  ; GetNext:=Buf[qqq_B];
+mov al, [bx+buf]
+inc word [qqq_b]
+add word [qqq_l], byte +0x1  ; inc(qqq_l);
+adc word [qqq_l+2], byte +0x0
+ret
+
+; procedure Header(const s: OpenString); assembler;
+%define Header_arg_s (bp+4)
+func_Header:
+push bp
+mov bp, sp
+cmp byte [ttt], '*'
+je strict short lx_69
+mov dx, ttt+25
+mov ah, 0x9
+int 0x21
+mov dx, ttt
+mov ah, 0x9
+int 0x21
+lx_69:
+mov al, 0xb2  ; '▓'
+mov cx, 0x3
+lx_6e:
+int 0x29
+int 0x29
+int 0x29
+int 0x29
+int 0x29
+dec al
+loop lx_6e
+push ds
+lds si, [Header_arg_s]
+lodsb
+mov ah, 0x0
+mov dx, ax
+shr ax, 1
+mov cx, 0x19
+sub cx, ax
+mov bx, cx
+mov al, ' '
+jcxz lx_96
+lx_92:
+int 0x29
+loop lx_92
+lx_96:
+mov cx, [si-0x1]
+mov ch, 0x0
+lx_9b:
+lodsb
+int 0x29
+loop lx_9b
+pop ds
+mov cx, 0x32
+sub cx, bx
+sub cx, dx
+mov al, ' '
+jcxz lx_b0
+lx_ac:
+int 0x29
+loop lx_ac
+lx_b0:
+mov al, 0xb0  ; '░'
+mov cx, 0x3
+lx_b5:
+int 0x29
+int 0x29
+int 0x29
+int 0x29
+int 0x29
+inc al
+loop lx_b5
+cmp byte [ttt], '*'
+je strict short lx_d1
+mov dx, ttt+9
+mov ah, 0x9
+int 0x21
+lx_d1:
+leave
+ret 0x4
+
+; procedure PrintLine(w: word); assembler;
+%define PrintLine_arg_w (bp+4)
+func_PrintLine:
+push bp
+mov bp, sp
+mov al, [PrintLine_arg_w]
+int 0x29
+mov cx, 0x4e
+mov al, 0xc4  ; '─'
+lx_e9:
+int 0x29
+loop lx_e9
+mov al, [PrintLine_arg_w+1]
+int 0x29
+leave
+ret 0x2
 
 times ((_code-$) & 15) nop  ; Align to paragraph (16) boundary with nop.
 seg_delta equ (($-_code) >> 4) + 0x10
