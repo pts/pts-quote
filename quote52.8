@@ -109,7 +109,7 @@ mov dx,idxfn_data  ; @  BA0C00
 int 021h  ; @  CD21
 mov qqq_han,ax  ; @  A32E00
 sbb ax,ax  ; @  1BC0
-mov word [offset offset_idx],00h  ; @  C7066D400000
+mov word [offset offset_idx],00h  ; @  C7066D400000  ; idx[0]:=0
 cmp ax,00h  ; @  3D0000
 jnz lx_162  ; @  750A
 cmp qqq_xch,0Dh  ; @  803E2C000D
@@ -597,6 +597,6 @@ footermsg:	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
 footermsg_data equ footermsg-_data
 _data_end:
 
-offset_buf= _data_end-_data  ; full+4 bytes used for multiple purposes.
+offset_buf= _data_end-_data  ; full+4 bytes used for multiple purposes.  ; Aligned.
 offset_var_s= offset offset_buf
-offset_idx= offset_buf+full+1+4
+offset_idx= offset_buf+full+1+4  ; array[0..24160] of word;  ; Aligned. TODO: Get rid of unused idx[0].

@@ -31,7 +31,7 @@ const
 var
   buf: array[0..full+4-1] of char;
   s: string absolute buf;
-  idx: array[0..24160] of word;  { TODO: idx[0] is always 0. Get rid of it. }
+  idx: array[0..24160] of word;  { 1 less is enough, first element unused. TODO: Get rid of idx[0]. }
   qqq: record
     a,b,w: word;
     l, max, oldl: longint;

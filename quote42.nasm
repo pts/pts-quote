@@ -612,7 +612,7 @@ _data_end:
 full equ 16384  ; Just a size.
 buf equ _data_end+((_data_end-$$)&1)-_data  ; array[0..full+4-1] of char;  Aligned.
 var_s equ buf  ; string; overlaps buf
-idx equ buf+full+4+((buf+_data+full+4-$$)&1)  ; array[0..24160] of word;  ; Aligned.
+idx equ buf+full+4+((buf+_data+full+4-$$)&1)  ; array[0..24160] of word;  ; Aligned. TODO: Get rid of unused idx[0].
 qqq_a equ headermsg  ; word; overlaps headermsg.
 qqq_b equ qqq_a+2  ; word; overlaps headermsg.
 qqq_w equ qqq_b+2  ; word; overlaps headermsg.

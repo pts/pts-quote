@@ -41,7 +41,7 @@ const
 var
   buf: array[0..full+4] of char;  { 1 less is enough, last element unused. }
   s: string absolute buf;
-  idx: array[0..24160] of word;  { 1 less is enough, last element unused. }
+  idx: array[0..24160] of word;  { 1 less is enough, first element unused. }
   qqq: record
     a,b,w: word;
     l, max, oldl: longint;

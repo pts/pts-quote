@@ -127,7 +127,7 @@ mov dx,idxfn_data  ; @0x0143  BA0C00
 int 021h  ; @0x0146  CD21
 mov qqq_han,ax  ; @0x0148  A32E00
 sbb ax,ax  ; @0x014B  1BC0
-mov word [offset offset_idx+0],00h  ; @0x014D  C7066D400000
+mov word [offset offset_idx],00h  ; @0x014D  C7066D400000  ; idx[0]:=0
 cmp ax,00h  ; @0x0153  3D0000
 jnz lx_162  ; @0x0156  750A
 cmp qqq_xch,13  ; @0x0158  803E2C000D
@@ -611,6 +611,6 @@ footermsg:	db 44,'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
 footermsg_data equ footermsg-_data
 _data_end:
 
-offset_buf= _data_end-_data  ; full+4 bytes used for multiple purposes.
+offset_buf= _data_end-_data  ; full+1+4 bytes used for multiple purposes.  ; Aligned.
 offset_var_s= offset_buf
-offset_idx= offset_buf+full+1+4
+offset_idx= offset_buf+full+1+4  ; array[0..24160] of word;  ; Aligned. idx[0] is unused.
