@@ -32,14 +32,50 @@
 ;touching the .idx file. Of course it's *very* slow unless you've a .txt file
 ;smaller than 64K.
 ;
-;I require an IBM compatible PC omputer, I can even work on an 8086 (no need
+;I require an IBM compatible PC computer, I can even work on an 8086 (no need
 ;for 286, 386, 486, Pentium etc.). I need exactly 64K free conventional
 ;memory. No matter ANSI.SYS is loaded or not. I can only produce nice
 ;text-mode graphics in 80-column modes. I need DOS 2.0 or later; DOSBox and
 ;FreeDOS also work.
 ;
-;My error codes are not documentated, however, I give back the same errorlevel
-;for the same error. Now the errors may be file i/o and line-too-long.
+; Errors are indicated by writing the letter E to the beginning of the line,
+; then writing the 2nd letter of the error code (a capital letter in A..Z),
+; then terminating the line, then beeping, then exiting with an errorlevel
+; (status) corresponding to the ASCII code of the 2nd letter of the error
+; code (e.g. 65 for A).
+;
+; To check whether quote.txt contains any errors (except for code EO and
+; quote-too-long), run with parameter "i". This will also regenerate the
+; index file quote.idx as a side effect. There are errors iff a line
+; starting with E is printed.
+;
+; Error codes for invalid contents in .txt file quote.txt during indexing:
+;
+; * ED: Too many quotes start in a 1024-byte block in .txt file quote.txt.
+;       One way to fix it is making all quotes at least 3 bytes long excluding
+;       the CRLFs and LFs after the quote. Another way to fix it is using CRLF
+;       (rather than LF) as line separator everywhere in quote.txt.
+; * EF: .txt file quote.txt is too long during indexing. Maximum allowed
+;       file size is 61.25 MiB == 64 225 280 bytes. To fix it, remove some
+;       quotes from quote.txt.
+; * EL: No quotes in the .txt file quote.txt. To fix it, add at least 1 quote,
+;       i.e. at least 1 byte which is not a line separator to quote.txt.
+;
+; Other error codes:
+;
+; * EA: Error opening the .txt file quote.txt for reading.
+; * EB: Error reading the index file quote.idx.
+; * EC: Index file too short (less than 2 bytes).
+; * EG: Error reading from the .txt file quote.txt during indexing.
+; * EH: Error opening the index file quote.idx for rewriting.
+; * EI: Error writing the index file quote.idx.
+; * EL: No quotes in the .txt file quote.txt.
+; * EM: Error seeking to the random position in the index file quote.idx.
+; * EN: Error reading the random quote from the .txt file.
+; * EO: Line too long in quote. The maximum size is 78 bytes (characters),
+;       excluding the CRLF or LF line separator. Please note that this error
+;       is not detected during indexing, but it's only reported if the
+;       randomly chosen quote has it.
 ;
 ; Limits:
 ;
@@ -119,7 +155,7 @@ _start:
 
 l18:	mov ax, 3D00h
 	mov dx, txtfn
-	call int21h			;Open .txt file quote.txt.
+	call error_int21h		;'A' Open .txt file quote.txt.
 	push ax				;Save .txt filehandle.
 
 	mov ax, 3D00h
@@ -134,9 +170,9 @@ l18:	mov ax, 3D00h
 	mov ah, 3Fh
 	mov cx, idxlen+2
 	mov dx, offset_idxc
-	call int21h			;Read the index file.
+	call error_int21h		;'B' Read the index file.
 	sub ax, byte 2
-	call errorc			;Index file too short (less than 3 bytes).
+	call errorc			;'C' Index file too short (less than 2 bytes).
 	xchg cx, ax			;Clobber AX, we don't care.
 	mov ah, 3Eh
 	int 21h				;Close the index file.
@@ -157,7 +193,8 @@ r1:	lodsb
 r2:	jmp strict near l5
 
 ;=======Starts generating the index file quote.idx.
-gen:	pop bx				;Restore .txt filehandle.
+gen:	mov byte [errorlevel], 'G'
+	pop bx				;Restore .txt filehandle.
 	mov di, offset_index
 	mov ah, 0			;Initial state. Can be 1 or 2 later.
 
@@ -166,7 +203,8 @@ l2:	push ax
 	mov cx, 1024
 	mov dx, offset_buffer
 	mov si, dx
-	call int21h			;Read from quote.txt during indexing.
+	dec byte [errorlevel]
+	call error_int21h		;'G' Read from quote.txt during indexing.
 	xchg cx, ax			;Clobbers AX. We don't care.
 	pop ax
 	jcxz l1
@@ -186,7 +224,8 @@ l4lt:	cmp ah, 0			;State 0 --letter--> increment, state 1.
 	jne strict short l4c		;State 1,2 --letter--> state 1.
 l4q:	inc dl				;Count the quote within the block.
 	jnz l4b
-	jmp strict short error		;Too many quotes start in an 1024-byte block.
+	mov byte [errorlevel], 'D'
+	jmp strict short error		;'D' Too many quotes start in a 1024-byte block.
 l4b:	add idxc, byte 1		;Count the quote as total. Modifies CF (inc doesn't).
 	adc idxchw, byte 0
 l4c:	mov ah, 1
@@ -195,50 +234,56 @@ l4next:	loop l4
 	stosb				;Add byte for current block to index.
 	cmp di, offset_index+idxlen
 	jne strict short l2
-	jmp strict short error		;quote.txt too long, index full.
+	mov byte [errorlevel], 'F'
+	jmp strict short error		;'F' quote.txt too long, index full.
 	; Execution path not reached.
 
 ;=======Does a DOS system call (int 21h) and exits with error if it fails.
 ;	Call this function with `call'.
-int21h: int 21h
+error_int21h:
+	int 21h
 	; Fall through to errorc.
 
 ;=======Exits with error if CF is set. Call this function with `call'.
-errorc:	jc strict short error
+errorc:	inc byte [errorlevel]		;Keeps CF intact.
+	jc strict short error
 retl:	ret				;Continue if there wasn't an error.
 	; Fall through to error.
 
 ;=======Exits upon error with a nonzero errorlevel indicating failure.
-error:	mov al, 7			;Beep.
-	int 29h				;Print character in AL.
-	mov ax, 4C02h			;Set errorlevel (status) to 2 (error).
-	int 21h				;Exit to DOS.
+error:	mov ah, 9
+	mov dx, errormsg
+	int 21h				;Write error message to stdout.
+	mov ah, 04Ch
+	mov al, [errorlevel]
+	int 21h				;Exit to DOS with errorlevel (status) in AL.
 	; Execution path not reached.
 
 ;=======Rewrites the index file.
 l1:	cmp param, 5
-	je strict short l19
+	je strict short l5
 	push bx				;Save .txt filehandle.
 	mov ah, 3Ch
 	xor cx, cx			;Creates with attributes = 0.
 	mov dx, idxfn
-	call int21h			;Open index file quote.idx for rewriting.
+	call error_int21h		;'H' Open index file quote.idx for rewriting.
 	mov bx, ax
 	mov ah, 40h
 	lea cx, [di-offset_idxc]	;CX := DI-ofs(index) == sizeof_index.
 	mov dx, offset_idxc
-	call int21h			;Write to index file.
+	call error_int21h		;'I' Write the index file.
 	mov ah, 3Eh
 	int 21h				;Close index file.
 	pop bx				;Restore .txt filehandle.
-l19:	cmp param, 2
-	je strict short retl		;Exit to DOS with int 20h.
 
 ;=======Continues after quote.idx has been read or generated.
-l5:	mov ax, [offset_idxc]
+l5:	mov byte [errorlevel], 'L'
+	mov ax, [offset_idxc]
 	or ax, [offset_idxchw]
-	jz strict short error		;No quotes in quote.txt.
-l5p:	push bx				;Save handle of quote.txt.
+	jz strict short error		;'L' No quotes in quote.txt.
+	cmp param, 2
+	je strict short retl		;Exit to DOS with int 20h.
+	push bx				;Save handle of quote.txt.
 
 ;=======Generates 32-bit random seed in SI:DI. Clobbers flags, AX, BX, CX.
 	mov ah, 0			;Read system clock counter to CX:DX.
@@ -309,7 +354,7 @@ l6:	sub si, offset_index+2		;SI := 1024-byte block index.
 	jns strict short l8
 	xor dx, dx			;Our quote is in block 0, seeks to the beginning.
 	xor cx, cx
-	call int21h			;Seek to the beginning of the index file.
+	call error_int21h		;'M' Seek to the beginning of the index file.
 	mov ax, 0A0Ah
 	stosw				;Add sentinel LF+LF before the beginning, for state 1 --> state 0.
 	; 1023 is the maximum size of the previous quote in the current (first)
@@ -325,7 +370,7 @@ l8:	; Set CX:DX to 1024 * SI + 1021.
 	and dx, ((1 << 6) - 1) << 10
 	add dx, 1021
 	adc cx, byte 0
-	call int21h			;Seek to 1024 * SI + 1021, near the end of the previous block.
+	call error_int21h		;'M' Seek to 1024 * SI + 1021, near the end of the previous block.
 	; 4 is the size of the end of the previous block, 1023 is the maximum size of
 	; the previous quote in the current block and (quote_limit-1) is the maximum
 	; size of our quote.
@@ -334,7 +379,7 @@ l8:	; Set CX:DX to 1024 * SI + 1021.
 ;=======Reads the blocks containing our quote (CX bytes in total).
 l20:	mov dx, di
 	mov ah, 3Fh
-	call int21h			;Read quote from .txt file.
+	call error_int21h		;'N' Read quote from .txt file.
 	add ax, dx
 	xchg ax, di			;DI := AX and clobber AX, but shorter.
 	mov ax, 0A0Ah
@@ -381,13 +426,14 @@ p4lt:	cmp ah, 0			;State 0 --letter--> decrement, state 1.
 	mov ax, 00EDAh
 	mov bx, 0BFh			;'┌┐'.
 	call pline			;Draw the top side of the frame.
+	inc byte [errorlevel]
 
 lld:    mov cx, 79
 	mov al, 10			;LF.
 	lea si, [di-1]
 	repnz scasb			;Seek LF using DI.
 	jz strict short z5
-	jmp strict near error		;Line too long in quote.
+	jmp strict near error		;'O' Line too long in quote.
 z5:	sub cx, byte 78			;Now: byte[di-1] == 10 (LF).
 	cmp byte [di-2], 13		;Compare against CRLF, we try to match CR.
 	jne strict short z5b
@@ -601,3 +647,7 @@ headermsg:	db headermsg_size, 'PotterSoftware Fortune Teller 2.63'
 headermsg_size	equ $-headermsg-1
 footermsg:	db footermsg_size, 'Greetings to RP,TT,FZ/S,Blala,OGY,FC,VR,JCR.'
 footermsg_size	equ $-footermsg-1
+errormsg:	db 'E'  ; Continues below.
+errorlevel:	db 'A'-1  ; '@'.
+		db 13, 10, 7  ; 7 is beep.
+		db '$'  ; End of string (for AH=9, int 21h).

@@ -72,8 +72,14 @@ File format of the text file quote.txt as of version 2.63:
 * The maximum number of quotes in quote.txt is 15 993 600. This is because
   quote.idx can describe up to 62720 1024-byte blocks, with up to 255 quotes
   each.
-* There is no validator. The program will misbehave for nonconforming
-  quote.txt files.
+* Each quote line must be at most 78 bytes (characters) long, excluding the
+  LF or CRLF terminator. This is only verified when printing the individual
+  quote.
+* To check whether quote.txt contains any errors (except for line-too-long
+  and quote-too-long), i.e. to validate it, run quote63n.com with parameter
+  "i" (without the quotes). This will also regenerate the index file
+  quote.idx as a side effect. There are errors iff a line starting with E is
+  printed.
 
 Further restrictions on quote.txt imposed by some earlier versions:
 
