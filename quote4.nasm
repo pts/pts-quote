@@ -211,23 +211,22 @@ call func_Header
 ; From http://www.osfree.org/doku/en:docs:dos:api:int29 :
 ; COMMAND.COM v3.2 and v3.3 compare the INT 29 vector against the INT 20
 ; vector and assume that ANSI.SYS is installed if the segment is larger.
+push es
 xor ax, ax
 mov es, ax
 mov bx, [es:0x29*4+2]  ; ansi:=memw[0:$29*4+2]>memw[0:$20*4+2];
 cmp bx, [es:0x20*4+2]
+pop es
 jnc strict short lx_12b
 mov byte [ttt], '*'  ; This means there's no ANSI.SYS
 lx_12b:
 
-mov ax, ds
-nop  ; Maintains same file size as quote3.exe.orig.
-mov es, ax
-mov al, [es:0x81]  ; First character of command-line arguments in PSP.  ; xch:=char(mem[PrefixSeg:$81]);
+mov al, [0x81]  ; First character of command-line arguments in PSP.  ; xch:=char(mem[PrefixSeg:$81]);
 cmp al, ' '
 jne strict short lx_13c  ; if xch=' ' then xch:=char(mem[PrefixSeg:$82]);
-mov al, [es:0x82]
+mov al, [0x82]
 lx_13c:
-cmp byte [es:0x80], 0x0  ; if mem[PrefixSeg:$80]=0 then xch:=' ';
+cmp byte [0x80], 0x0  ; if mem[PrefixSeg:$80]=0 then xch:=' ';
 jne strict short lx_146
 mov al, ' '
 lx_146:
@@ -315,8 +314,6 @@ lx_222:
 mov cx, [qqq_a]
 dec cx
 mov si, idx+2
-mov ax, ds
-mov es, ax
 mov di, buf
 xor dx, dx
 lx_233:
@@ -380,8 +377,6 @@ mov cx, [qqq_a]
 mov dx, 0x1
 mov si, buf
 mov di, idx+2
-mov ax, ds
-mov es, ax
 lx_2af:
 lodsb
 mov ah, 0x0
