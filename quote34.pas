@@ -139,22 +139,26 @@ label llc,lld,lle,llf,lls,after_random;
 
 begin { Főprogram }
   asm { This statement is going to be long. Very long. }
-	{ Check for ANSI.SYS & get command line parameter }
 	mov al, 13				{ Writeln }
 	int 29h
 	mov al, 10
 	int 29h
-	push ds				{ Header ki }
-	push offset headermsg
-	call Header
 
+	{ Detect ANSI.SYS. }
 	xor ax, ax { ansi:=memw[0:$29*4+2]>memw[0:$20*4+2]; }
 	mov es, ax
 	mov bx, [es:$29+$29+$29+$29+2]
 	cmp bx, [es:$20+$20+$20+$20+2]
 	jae @95
 	mov byte ptr ttt, '*' { This means there's no ANSI.SYS }
-@95:    mov ax, PrefixSeg { xch:=char(mem[PrefixSeg:$81]); }
+@95:
+
+	push ds
+	push offset headermsg
+	call Header  { Print header. }
+
+	{ Get parameter from beginning of command-line arguments. }
+	mov ax, PrefixSeg  { xch:=char(mem[PrefixSeg:$81]); }
 	mov es, ax
 	mov al, [es:81h]
 	cmp al, ' '
