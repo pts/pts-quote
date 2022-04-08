@@ -173,12 +173,13 @@ begin { Főprogram }
 	{ es will remain this way for the rest of the run.
 	  It affects es:, stosb, stosw, scasb, scasw, movsb, movsw, cmpsb, cmpsw. }
 	mov es, ax
+
 	{ qqq.w:=XReset(IdxFn); }
 	mov ax, 3D00h { Open for Read Only, C-Mode }
 	mov dx, offset idxfn
 	int 21h
 	mov qqq.han, ax
-	sbb ax, ax { AX:=0, ha OK; AX:=$FFFF, ha hiba }
+	sbb ax, ax  { AX:=0 if ok; AX:=$FFFF on error. }
 	mov word ptr idx, 0			{ idx[0]:=0 }
 	cmp ax, 0                           { if (IOResult<>0) or (xch<>#0) then }
 	jne @90
@@ -252,7 +253,7 @@ begin { Főprogram }
 	mov bx, qqq.han
 	int 21h
 
-	cmp qqq.xch, 'A' { Nem írjuk ki az IT-t, ha az A par. van }
+	cmp qqq.xch, 'A'  { Don't write the index file on parameter 'A'. }
 	je llc
 	mov cx, qqq.a
 	dec cx
@@ -339,7 +340,7 @@ llc:    cmp qqq.xch, 'C'
 	mov qqq.han, ax
 	{ Now qqq.a-1 is the number of quotes in txtfn, provided that txtfn ends with CRLF + CRLF. }
 	xor ax, ax
-	mov word ptr qqq.l, ax  { L kezdőoffszet kiszámolása }
+	mov word ptr qqq.l, ax
 	mov word ptr qqq.l+2, ax
 	mov si, qqq.a
 	test si, si
@@ -381,11 +382,13 @@ llc:    cmp qqq.xch, 'C'
 	pop bp
 	jz after_random  { If the chosen random number is 0, print from the beginning of txtfn. }
 
+	{ Calculate the start offset of quote qqq.w into qqq.l:
+	  qqq.l := idx[qqq.w] + idx[qqq.w-1] + ... + idx[qqq.1]. }
         mov si, offset idx
 	add si, dx
 	add si, dx
 	std
-@97:    lodsw                             { L:=IDX[W]+IDX[W-1]+...+IDX[1] }
+@97:    lodsw
 	add word ptr qqq.l, ax
 	adc word ptr qqq.l[2], 0
 	cmp si, offset idx
@@ -393,7 +396,7 @@ llc:    cmp qqq.xch, 'C'
 	cld
 
 after_random:
-	push $BFDA { ┌┐ }                 { Keret ki }
+	push $BFDA
 	call PrintLine
 
 lld:    { seek(f, qqq.l); }
@@ -442,7 +445,7 @@ lld:    { seek(f, qqq.l); }
         jne @d
         mov al, 1
         mov ds, cx
-	jmp @9 { Empty string: do nothing but restore original CS }
+	jmp @9  { Empty string: do nothing but restore original CS. }
 @d:     mov qqq.ansich, 0 { AnsiCh is 0 by default }
         cmp byte ptr [ds:si], '-'
         jne @c
@@ -516,9 +519,10 @@ lld:    { seek(f, qqq.l); }
 { END OF ALIGN }
 
 @9:     or al, al
-	jz lld             	{ Ha FALSE-t ad vissza, még van köv. sor }
-				{ Különben lábléc és program vége }
-lle:    push $D9C0	{ └┘ }
+	jz lld  { Line not empty, print next line. }
+
+lle:    { Print border and footer, then exit to DOS with EXIT_SUCCESS (0). }
+	push $D9C0  { Print border '└┘'. }
 	call PrintLine
 	push ds
 	push offset footermsg

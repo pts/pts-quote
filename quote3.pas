@@ -157,22 +157,26 @@ label llc,lld,lle,llf,lls;
 
 begin { Főprogram }
   asm { This statement is going to be long. Very long. }
-	{ Check for ANSI.SYS & get command line parameter }
 	mov al, 13				{ Writeln }
 	int 29h
 	mov al, 10
 	int 29h
-	push ds				{ Header ki }
-	push offset headermsg
-	call Header { BUG: This should be called after the ANSI.SYS detection below }
 
+	push ds  { Print header. }
+	push offset headermsg
+	call Header  { BUG: This should be called after the ANSI.SYS detection below }
+
+	{ Detect ANSI.SYS. }
 	xor ax, ax { ansi:=memw[0:$29*4+2]>memw[0:$20*4+2]; }
 	mov es, ax
 	mov bx, [es:$29+$29+$29+$29+2]
 	cmp bx, [es:$20+$20+$20+$20+2]
 	jae @95
 	mov byte ptr ttt, '*' { This means there's no ANSI.SYS }
-@95:    mov ax, PrefixSeg { xch:=char(mem[PrefixSeg:$81]); }
+@95:
+
+	{ Get parameter from beginning of command-line arguments. }
+	mov ax, PrefixSeg  { xch:=char(mem[PrefixSeg:$81]); }
 	mov es, ax
 	mov al, [es:81h]
 	cmp al, ' '
@@ -183,12 +187,13 @@ begin { Főprogram }
 	mov al, ' '
 @94:    and al, 255-32
 	mov qqq.xch, al
+
 	{ qqq.w:=XReset(IdxFn); }
 	mov ax, 3D00h { Open for Read Only, C-Mode }
 	mov dx, offset idxfn
 	int 21h
 	mov qqq.han, ax
-	sbb ax, ax { AX:=0, ha OK; AX:=$FFFF, ha hiba }
+	sbb ax, ax  { AX:=0 if ok; AX:=$FFFF on error. }
 	mov word ptr idx, 0			{ idx[0]:=0 }
 	cmp ax, 0                           { if (IOResult<>0) or (xch<>#0) then }
 	jne @90
@@ -259,7 +264,7 @@ begin { Főprogram }
 	mov bx, qqq.han
 	int 21h
 
-	cmp qqq.xch, 'A' { Nem írjuk ki az IT-t, ha az A par. van }
+	cmp qqq.xch, 'A' { Don't write the index file on parameter 'A'. }
 	je llc
 	mov cx, qqq.a
 	dec cx
@@ -369,19 +374,21 @@ llc:    cmp qqq.xch, 'C'
 	mov qqq.w, ax
 	pop es
 
-        mov word ptr qqq.l, 0                 { L kezdőoffszet kiszámolása }
+	{ Calculate the start offset of quote qqq.w into qqq.l:
+	  qqq.l := idx[qqq.w] + idx[qqq.w-1] + ... + idx[qqq.1]. }
+        mov word ptr qqq.l, 0
         mov word ptr qqq.l[2], 0
         mov si, offset idx
 	add si, qqq.w
 	add si, qqq.w
 	std
-@97:    lodsw                             { L:=IDX[W]+IDX[W-1]+...+IDX[1] }
+@97:    lodsw
 	add word ptr qqq.l, ax
 	adc word ptr qqq.l[2], 0
 	cmp si, offset idx
 	jne @97
 	cld
-	push $BFDA { ┌┐ }                 { Keret ki }
+	push $BFDA  { Print border '┌┐'. }
 	call PrintLine
 
 lld:    { seek(f, qqq.l); }
@@ -430,7 +437,7 @@ lld:    { seek(f, qqq.l); }
         jne @d
         mov al, 1
         mov ds, cx
-	jmp @9 { Empty string: do nothing but restore original CS }
+	jmp @9  { Empty string: do nothing but restore original CS. }
 @d:     mov qqq.ansich, 0 { AnsiCh is 0 by default }
         cmp byte ptr [ds:si], '-'
         jne @c
@@ -504,9 +511,10 @@ lld:    { seek(f, qqq.l); }
 { END OF ALIGN }
 
 @9:     or al, al
-	jz lld             	{ Ha FALSE-t ad vissza, még van köv. sor }
-				{ Különben lábléc és program vége }
-lle:    push $D9C0	{ └┘ }
+	jz lld  { Line not empty, print next line. }
+
+lle:    { Print border and footer, then exit to DOS with EXIT_SUCCESS (0). }
+	push $D9C0  { Print border '└┘'. }
 	call PrintLine
 	push ds
 	push offset footermsg

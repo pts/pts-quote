@@ -59,6 +59,7 @@ main:	mov al, 13  ; Writeln
 	int 29h
 	mov al, 10
 	int 29h
+
 	; Detect ANSI.SYS.
 	;
 	; From http://www.osfree.org/doku/en:docs:dos:api:int29 :
@@ -72,9 +73,12 @@ main:	mov al, 13  ; Writeln
 	pop es
 	jae strict short @95
 	mov byte [ttt], '*'  ; This means there's no ANSI.SYS
-@95:	push strict word headermsg
-	call func_Header
-	
+@95:
+
+	push strict word headermsg
+	call func_Header  ; Print header.
+
+	; Get parameter from beginning of command-line arguments.
 	mov al, [81h]  ; First character of command-line arguments in PSP.  ; xch:=char(mem[PrefixSeg:$81]);
 	cmp al, ' '
 	jne strict short @96  ; if xch=' ' then xch:=char(mem[PrefixSeg:$82]);
@@ -84,12 +88,13 @@ main:	mov al, 13  ; Writeln
 	mov al, ' '
 @94:	and al, 255-32
 	mov [qqq_xch], al
+
 	; qqq_w:=XReset(IdxFn);
 	mov ax, 3D00h  ; Open for Read Only, C-Mode
 	mov dx, idxfn
 	int 21h
 	mov [qqq_han], ax
-	sbb ax, ax  ; AX:=0, ha OK ; AX:=$FFFF, ha hiba
+	sbb ax, ax  ; AX:=0 if ok; AX:=$FFFF on error.
 	mov word [idx], 0  ; idx[0]:=0
 	cmp ax, strict word 0  ; if (IOResult<>0) or (xch<>#0) then
 	jne strict short @90
@@ -158,7 +163,7 @@ main:	mov al, 13  ; Writeln
 	mov ah, 3Eh
 	mov bx, [qqq_han]
 	int 21h
-	cmp byte [qqq_xch], 'A'  ; Nem írjuk ki az IT-t, ha az A par. van
+	cmp byte [qqq_xch], 'A'  ; Don't write the index file on parameter 'A'.
 	jne strict short @82_ne
 	jmp strict near llc
 @82_ne:	mov cx, [qqq_a]
@@ -247,7 +252,7 @@ llc:	cmp byte [qqq_xch], 'C'
 	jc strict short fatal_error
 	; Now qqq_a-1 is the number of quotes in txtfn, provided that txtfn ends with CRLF + CRLF.
 	xor ax, ax
-	mov [qqq_l], ax  ; L kezdőoffszet kiszámolása
+	mov [qqq_l], ax
 	mov [qqq_l+2], ax
 	mov si, [qqq_a]
 	test si, si
@@ -286,11 +291,13 @@ llc:	cmp byte [qqq_xch], 'C'
 	adc dx, bp  ; DX:=random(SI)
 	jz strict short after_random  ; If the chosen random number is 0, print from the beginning of txtfn.
 	
+	; Calculate the start offset of quote qqq.w into qqq.l:
+	; qqq.l := idx[qqq.w] + idx[qqq.w-1] + ... + idx[qqq.1].
 	mov si, idx
 	add si, dx
 	add si, dx
 	std
-@97:	lodsw  ; L:=IDX[W]+IDX[W-1]+...+IDX[1]
+@97:	lodsw
 	add [qqq_l], ax
 	adc word [qqq_l+2], byte 0
 	cmp si, idx
@@ -298,7 +305,7 @@ llc:	cmp byte [qqq_xch], 'C'
 	cld
 	
 after_random:
-	push strict word 0BFDAh  ; '┌┐'  ; Keret ki
+	push strict word 0BFDAh  ; Print border '┌┐'.
 	call func_PrintLine
 	
 lld:	; seek(f, qqq_l);
@@ -419,19 +426,20 @@ lld:	; seek(f, qqq_l);
 	int 29h
 	mov al, 0 ; The return value is FALSE
 	; END OF ALIGN
-	
+
 @9:	or al, al
 	jnz strict short lle
-	jmp strict near lld  ; Ha FALSE-t ad vissza, még van köv. sor, Különben lábléc és program vége
+	jmp strict near lld  ; Line not empty, print next line.
 	
-lle:	push strict word 0D9C0h  ; '└┘'
+lle:	; Print border and footer, then exit to DOS with EXIT_SUCCESS (0).
+	push strict word 0D9C0h  ; Print border '└┘'.
 	call func_PrintLine
 	push strict word footermsg
 	call func_Header
 	mov ah, 3Eh  ; close(F);
 	mov bx, [qqq_han]
 	int 21h
-llf:	mov ax, 4C00h  ; EXIT_SUCCESS.
+llf:	mov ax, 4C00h  ; EXIT_SUCCESS (0).
 	int 21h  ; Exit to DOS.
 	
 ; function GetNext: char; assembler;
