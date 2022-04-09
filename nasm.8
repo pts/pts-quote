@@ -1,0 +1,263 @@
+; --- Compatibility library for A86 >=3.22, NASM >=0.98.39, Yasm >=1.2.0.
+
+section macro byte ; NASM + Yasm code follows (no A86).
+; FYI `%undef' above (after `%define') doesn't work in A86 3.72.
+
+; Emulating byte-by-byte A86 output.
+;
+; Overries e.g. `or bh, bh' (only if both arguments are general purpose
+; registers) to make the 2 bytes emitted match A86.
+
+%define _R_ax 0
+%define _R_cx 1
+%define _R_dx 2
+%define _R_bx 3
+%define _R_sp 4
+%define _R_bp 5
+%define _R_si 6
+%define _R_di 7
+%define _R_al -1  ; 0. Negative value indicates byte-sized register.
+%define _R_cl -2  ; 1.
+%define _R_dl -3
+%define _R_bl -4
+%define _R_ah -5
+%define _R_ch -6
+%define _R_dh -7
+%define _R_bh -8
+
+%define _RI_add  0x100
+%define _RI_or   0x108
+%define _RI_adc  0x110
+%define _RI_sbb  0x118
+%define _RI_and  0x120
+%define _RI_sub  0x128
+%define _RI_xor  0x130
+%define _RI_cmp  0x138
+%define _RI_test 0x284
+%define _RI_xchl 0x286  ; Long (2-byte) xchg. Not a real instruction.
+%define _RI_xchg 0x486
+%define _RI_mov  0x088
+
+%macro a86 3  ; a86 <instruction>, <destination>, <source>
+; This macro assumes __BITS__ == 16 in its db instructions.
+; (Older versions of NASM don't support __BITS__.)
+%ifid %1  ; Only checks the first token for identifier.
+%ifnid _R_%2
+%ifnid _R_%3
+%ifnid _RI_%1
+%if (_R_%2) >= 0
+%if (_R_%3) >= 0
+%if ((_RI_%1) >> 8) == 4 && ((_R_%2) == 0 || (_R_%3) == 0)
+db 0x90 | (_R_%2) | (_R_%3)  ; 1-byte xchg with ax.
+%elif ((_RI_%1) >> 8) < 2 && (((_R_%2) >> 1) ^ ((_R_%3) >> 1) ^ ((_RI_%1) >> 8)) & 1
+db (_RI_%1) & 0xff | 3, 0xc0 | (_R_%3) | (_R_%2) << 3
+%else
+db (_RI_%1) & 0xff | 1, 0xc0 | (_R_%2) | (_R_%3) << 3  ; nasm.
+%endif
+%else
+%error word-size register %3 unknown
+db 0x90, 0x90
+_force_ _error_  ; On NASM 0.98.39.
+%endif
+%else
+%if (_R_%2) < 0
+%if (_R_%3) < 0
+%if ((_RI_%1) >> 8) < 2 && (((-1 - (_R_%2)) >> 1) ^ ((-1 - (_R_%3)) >> 1) ^ ((_RI_%1) >> 8)) & 1
+db (_RI_%1) & 0xff | 2, 0xc0 | (-1 - (_R_%3)) | (-1 - (_R_%2)) << 3
+%else
+db (_RI_%1) & 0xff, 0xc0 | (-1 - (_R_%2)) | (-1 - (_R_%3)) << 3  ; nasm.
+%endif
+%else
+%error byte-size register %3 unknown
+db 0x90, 0x90
+_force_ _error_  ; On NASM 0.98.39.
+%endif
+%else
+%error register %2 unknown
+db 0x90, 0x90
+_force_ _error_  ; On NASM 0.98.39.
+%endif
+%endif
+%else
+%error instruction %1 unknown
+db 0x90, 0x90
+_force_ _error_  ; On NASM 0.98.39.
+%endif
+%else  ;%ifnid _R_%3
+%define %1 %1
+%1 %2, %3  ; Just emit regular instruction, e.g. for a86 mov, ax, [bx]
+%define %1 a86 %1,
+%endif  ;%ifnid _R_%3
+%else  ;%ifnid _R_%2
+%define %1 %1
+%1 %2, %3  ; Just emit regular instruction, e.g. for a86 mov, [bx], ax
+%define %1 a86 %1,
+%endif  ;%ifnid _R_%2
+%else  ;%ifid %1
+%error a86 instruction must start with identifier, got: %1
+_force_ _error_  ; On NASM 0.98.39.
+%endif  ;%ifid %1
+%endmacro
+
+%define add  a86 add,
+%define or   a86 or,
+%define adc  a86 adc,
+%define sbb  a86 sbb,
+%define and  a86 and,
+%define sub  a86 sub,
+%define xor  a86 xor,
+%define cmp  a86 cmp,
+%define test a86 test,
+;%define xchl a86 xchl,  ; Always 2-byte xchg instruction. NASM only.
+%define xchg a86 xchg,
+%define mov  a86 mov,
+
+; End of emulating byte-by-byte A86 output.
+
+%define AND &
+%define SHR >>
+%define SHL <<
+
+%define offset
+;%define ptr  ; A86 supports `byte ptr [...]', but we just use `byte [...]'.
+
+; !! document everything in the compatibility library.
+%define byte_arg(n) strict byte (n)
+%define word_arg(n) strict word (n)
+
+; Fail if %1 is nonzero.
+%macro assert0 1
+  times  (%1) nop
+  times -(%1) nop
+  ;%if %1  ; This doesn't work in Yasm 1.2.0: non-constant value given to `%if'
+  ;  %error assert0 failed
+  ;  _assert0_error_ _error_  ; To make NASM 0.98.39 fail (not just warning).
+  ;%endif
+%endm
+
+%macro defarg 2
+  %define %1 %2
+%endm
+
+%macro times_db 2
+  times (%1) db %2
+%endm
+
+%macro jmp_near 1
+  jmp strict near (%1)
+%endm
+
+%macro jmp_short 1
+  jmp strict short (%1)
+%endm
+
+%macro push_byte 1
+  push strict byte (%1)
+%endm
+
+%macro push_word 1
+  push strict word (%1)
+%endm
+
+%macro mov_al_bx_byte 1
+  ;mov al, [bx+byte (%1)]  ; No such `byte' syntax in NASM 0.98.39.
+  db 8Ah, 47h, (%1)
+%endm
+
+%macro xor_di_byte 1
+  xor di, strict byte (%1)
+%endm
+
+%macro sub_word_byte 2
+  sub word [(%1)], strict byte (%2)
+%endm
+
+%macro sub_di_byte 1
+  sub di, strict byte (%1)
+%endm
+
+; If specified flag condition is true, jump.
+%macro iff 2
+  j%-1 strict short %%skip
+  %2
+  %%skip:
+%endmacro
+
+%ifidn, #em  ; A86-only code follows.
+
+byte_arg = st
+word_arg = st
+
+; Upon failure (#1 is nonzero), A86 reports error: 01 Unknown Mnemonic.
+assert0 macro
+  ##if #1
+    _assert0_error_
+  ##endif
+#em
+
+defarg macro
+  #1 = #2
+#em
+
+times_db macro
+  ; FYI, A86 happily accepts a negative #1, and moves $ back.
+  db #1 dup (#2)
+#em
+
+; Force generating a near jump (with 2-byte offset).
+jmp_near macro
+  db 0e9h
+  ;jmp long #1  ; This sometimes generates a short jump (with 1-byte offset).
+  dw (#1)-$-2
+#em
+
+jmp_short macro
+  jmp short (#1)
+#em
+
+; Force generating of a 1-byte, sign-extended push, even iff the value of #1
+; is not known yet. (If the value is known, `push ...' also works in A86.)
+push_byte macro
+  db 06Ah, (#1)
+#em
+
+push_word macro  ; TODO: Replace it with push_byte if possible.
+  db 68h
+  dw (#1)
+#em
+
+; Like `mov al, [bx+byte (#1)], but it actually respects the `byte' with forward-declared #1.
+mov_al_bx_byte macro
+  db 8Ah, 47h, (#1)
+#em
+
+; Like `xor di, byte (#1)', but it actually respects the `byte' with forward-declared #1.
+xor_di_byte macro
+  db 83h, 0F7h, (#1)
+#em
+
+; Like `sub word [(#1)], byte (#2)', but it actually respects the `byte' with forward-declared #2.
+sub_word_byte macro
+  db 83h, 2Eh
+  dw (#1)
+  db (#2)
+#em
+
+; Like `sub di, byte (#1)', but it actually respects the `byte' with forward-declared #1.
+sub_di_byte macro
+  db 83h, 0EFh
+  db (#1)
+#em
+
+iff macro
+  if #1 #2
+#em
+
+bits macro #em
+cpu  macro #em  ; `a86 +P0' for 8086, `a86 +P2' for 286. Default is host.
+
+section2 macro
+%endif
+%define __EM__ #em  ; Common code (NASM and A86) follows.
+
+; --- End of compatibility library.
