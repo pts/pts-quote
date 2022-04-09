@@ -16,6 +16,11 @@
 ;
 ;   a86 quote4.8
 ;
+; Alternatively, compile it with A86 3.22 .. 4.05 with DOSBox on Linux,
+; generate quote4.com:
+;
+;   ./runa86.sh a86 quote4.8
+;
 ; Reproduces the NASM variant quote4n.com.orig (1251 bytes).
 ;
 ; This source file is for archival purposes only.
@@ -54,7 +59,7 @@
 ; nasm.8, which makes the rest of the code work with the assemblers
 ; A86 >=3.22, NASM >=0.98.39, Yasm >=1.2.0. Please note that A86 3.22 doesn't
 ; support `include', so to make it work, replace these lines with the contents
-; of the file nasm.8.
+; of the file nasm.8, or use runa86.sh to automate it.
 %define macro  ; NASM + Yasm code follows (no A86).
 %macro include 1
 %include %1
