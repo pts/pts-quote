@@ -34,7 +34,7 @@
 ; * 'C'-> Create index table.
 ;
 
-; Force generating a near jump (white 2-byte offset).
+; Force generating a near jump (with 2-byte offset).
 jmp_near macro
   db 0e9h
   ;jmp long #1  ; This sometimes generates a short jump (with 1-byte offset).
@@ -598,7 +598,7 @@ ret  ; @0x053C  C3
 db ((_code-$) and 15) dup 09Eh  ; Align to paragraph (16) boundary with sahf.
 seg_delta= (($-_code) shr 4)+010h
 
-;=======Kezdőértékes adatok
+; Data with initial value (_data).
 _data:
 txtfn:	db 'QUOTE.TXT',0,0,0  ; Extra 0s because of _bss overlap with headermsg.
 txtfn_data equ txtfn-_data
