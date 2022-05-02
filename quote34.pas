@@ -152,7 +152,17 @@ begin { Főprogram }
 	mov dl, 10
 	int 21h
 
-	{ Detect ANSI.SYS. }
+	{ Detect ANSI.SYS.
+
+	From http://www.osfree.org/doku/en:docs:dos:api:int29 :
+	COMMAND.COM v3.2 and v3.3 compare the INT 29 vector against the INT 20
+	vector and assume that ANSI.SYS is installed if the segment is larger.
+
+	To do so, we should use `ja' instead of `jae' below, but then it
+	wouldn't detect the built-in ANSI.SYS in DOSBox 0.74-4 (for which the
+	segments are equal). Please note that neither is correct for
+	MS-DOS 6.22, because both report ANSI.SYS is installed even if it isn't.
+	}
 	xor ax, ax { ansi:=memw[0:$29*4+2]>memw[0:$20*4+2]; }
 	mov es, ax
 	mov bx, [es:$29+$29+$29+$29+2]
