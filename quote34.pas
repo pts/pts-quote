@@ -8,8 +8,8 @@ Compile it with Turbo Pascal 7.0 on DOS, generate quote34.exe: tpc quote34.pas
 The QUOTE.IDX index file format is identical in version 2.30 .. 2.5? and
 different from version 2.60.
 
-It uses ANSI.SYS for color output, and it detects the lack of ANSI.SYS (such as
-in DOSBox), and then it prints colorless output.
+It uses ANSI.SYS for color output, and it detects the lack of ANSI.SYS, and
+then it prints colorless output.
 
 Command-line argument (first byte on the command-line):
 
@@ -79,41 +79,47 @@ procedure Header(const s: OpenString); assembler;
         mov dx, offset ttt[0]
         mov ah, 9
 	int 21h
-@71:    mov al, 0b2h  { '▓' }
+@71:    mov ah, 2
+	mov dl, 0B2h  { '▓' }
 	mov cx, 3
-@72:    int 29h; int 29h; int 29h; int 29h; int 29h
-        dec al
+@72:    int 21h; int 21h; int 21h; int 21h; int 21h
+        dec dl
         loop @72
 	push ds
         lds si, s
         lodsb
 	mov ah, 0
-        mov dx, ax
+	push ax
 	shr ax, 1
         mov cx, 25
         sub cx, ax
         mov bx, cx
-        mov al, ' '
+        mov ah, 2
+        mov dl, ' '
 	jcxz @74
-@75:    int 29h
+@75:    int 21h
 	loop @75
 @74:    mov cx, [ds:si-1]
 	mov ch, 0
 @76:    lodsb
-	int 29h
+	mov dl, al
+	int 21h
         loop @76
-        pop ds
         mov cx, 50
 	sub cx, bx
+	pop dx
+        pop ds
         sub cx, dx
-        mov al, ' '
+        mov ah, 2
+        mov dl, ' '
 	jcxz @78
-@77:    int 29h
+@77:    int 21h
 	loop @77
-@78:    mov al, 0b0h  { '░' }
+@78:	mov ah, 2
+	mov dl, 0B0h  { '░' }
 	mov cx, 3
-@73:    int 29h; int 29h; int 29h; int 29h; int 29h
-	inc al
+@73:    int 21h; int 21h; int 21h; int 21h; int 21h
+	inc dl
 	loop @73
 	cmp byte ptr ttt, '*'
 	je @79
@@ -125,24 +131,26 @@ end;
 
 procedure PrintLine(w: word); assembler;
   asm
-	mov al, byte ptr w
-        int 29h
+	mov ah, 2
+	mov dl, byte ptr w
+        int 21h
 	mov cx, 78
-	mov al, 0c4h  { '─' }
-@70:    int 29h
+	mov dl, 0C4h  { '─' }
+@70:    int 21h
 	loop @70
-	mov al, byte ptr w[1]
-	int 29h
+	mov dl, byte ptr w[1]
+	int 21h
 end;
 
 label llc,lld,lle,llf,lls,after_random,fatal_error;
 
 begin { Főprogram }
   asm { This statement is going to be long. Very long. }
-	mov al, 13				{ Writeln }
-	int 29h
-	mov al, 10
-	int 29h
+	mov ah, 2
+	mov dl, 13				{ Writeln }
+	int 21h
+	mov dl, 10
+	int 21h
 
 	{ Detect ANSI.SYS. }
 	xor ax, ax { ansi:=memw[0:$29*4+2]>memw[0:$20*4+2]; }
@@ -437,14 +445,12 @@ lld:    { seek(f, qqq.l); }
 
 	{ Calculate the value of BEFORE first using up AnsiCh: #0=Left '-'=Right
 	'&'=Center alignment }
-	mov cx, ds
         mov si, offset s
         mov qqq.w, si
         lodsb
 	cmp al, 0
         jne @d
         mov al, 1
-        mov ds, cx
 	jmp @9  { Empty string: do nothing but restore original CS. }
 @d:     mov qqq.ansich, 0 { AnsiCh is 0 by default }
         cmp byte ptr [ds:si], '-'
@@ -457,20 +463,23 @@ lld:    { seek(f, qqq.l); }
         dec ax
         mov [ds:si+1],al
 @c:     mov ah, 0
-        mov ds, cx
         mov bx, 78
+        mov cl, '7'
         cmp qqq.ansich, 0
         jne @a
 	mov al, 0
         mov bx, 0
 @a:     cmp qqq.ansich, '&'
         jne @b
+        mov cl, '2'
         mov bx, 39
         shr ax, 1
-@b:     sub bx, ax
+@b:	mov byte ptr ttt[17+3], cl  { Set ANSI color of aligned text. }
+	sub bx, ax
         mov qqq.before, bx
-        mov al, 0b3h  { '│' } { The line starts by this }
-        int 29h
+        mov ah, 2
+        mov dl, 0B3h  { '│' } { The line starts by this }
+        int 21h
         cmp byte ptr ttt, '*' { Put out an ANSI EscSeq to set color if needed }
         je @6
         mov ah, 9
@@ -478,7 +487,6 @@ lld:    { seek(f, qqq.l); }
 	cmp al, 0
         je @6
         add al, 10
-        mov byte ptr ttt[17+3], al
         mov dx, offset ttt[17]
         int 21h
 	mov qqq.ansich, 0
@@ -487,24 +495,28 @@ lld:    { seek(f, qqq.l); }
         lodsb
         mov cl, al
         mov ch, 0
-        mov dx, cx
         jcxz @1
+        push cx
         mov cx, qqq.before
+        mov ah, 2
         jcxz @5
-        mov al, ' '
-@2:     int 29h
+        mov dl, ' '
+@2:     int 21h
         loop @2
-@5:     mov cx, dx
+@5:     pop cx
+	push cx
         jcxz @8
 @3:     lodsb
-        int 29h
+	mov dl, al
+        int 21h
         loop @3
-@8:     mov cx, 78
+@8:     pop dx
+	mov cx, 78
         sub cx, qqq.before
 	sub cx, dx
 	jcxz @1
-	mov al, ' '
-@4:     int 29h
+	mov dl, ' '
+@4:     int 21h
 	loop @4
 @1:     pop ds
 	cmp byte ptr ttt, '*' { Restore original color via ANSI EscSeq if needed }
@@ -512,9 +524,10 @@ lld:    { seek(f, qqq.l); }
 	mov ah, 9
 	mov dx, offset ttt[25]
 	int 21h
-@7:     mov al, 0b3h  { '│' } { The line ends by this, too }
-	int 29h
-	mov al, 0 { The return value is FALSE }
+@7:     mov ah, 2
+	mov dl, 0B3h  { '│' } { The line ends by this, too }
+	int 21h
+	mov al, 0  { The return value is FALSE }
 
 { END OF ALIGN }
 

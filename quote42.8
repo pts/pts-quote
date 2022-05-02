@@ -32,8 +32,8 @@
 ; code quote3.pas, matching its assembly instructions as closely as possible.
 ; Since then some bugs were fixed.
 ;
-; It uses ANSI.SYS for color output, and it detects the lack of ANSI.SYS
-; (such as in DOSBox), and then it prints colorless output.
+; It uses ANSI.SYS for color output, and it detects the lack of ANSI.SYS, and
+; then it prints colorless output.
 ;
 ; Command-line argument (first byte on the command-line):
 ;
@@ -96,10 +96,11 @@ resize_ok:
 	add ax, 100h  ; 1 KiB of stack at the end of the 68 KiB.
 	mov ss, ax
 
-main:	mov al, 13  ; Writeln
-	int 29h
-	mov al, 10
-	int 29h
+main:	mov ah, 2
+	mov dl, 13  ; Writeln
+	int 21h
+	mov dl, 10
+	int 21h
 
 	; Detect ANSI.SYS.
 	;
@@ -389,14 +390,12 @@ lld:	; seek(f, qqq_l);
 
 	; Calculate the value of BEFORE first using up AnsiCh: #0=Left '-'=Right
 	; '&'=Center alignment
-	mov cx, ds
 	mov si, offset var_s
 	mov [qqq_w], si
 	lodsb
 	cmp al, 0
 	jne @d
 	mov al, 1
-	mov ds, cx
 	jmp_near @9  ; Empty string: do nothing but restore original CS
 @d:	mov byte [qqq_ansich], 0  ; AnsiCh is 0 by default
 	cmp byte [si], '-'
@@ -409,20 +408,23 @@ lld:	; seek(f, qqq_l);
 	dec ax
 	mov [si+1h], al
 @c:	mov ah, 0
-	mov ds, cx
 	mov bx, 78
+	mov cl, '7'
 	cmp byte [qqq_ansich], 0
 	jne @a
 	mov al, 0
 	mov bx, 0
 @a:	cmp byte [qqq_ansich], '&'
 	jne @b
+	mov cl, '2'
 	mov bx, 39
 	shr ax, 1
-@b:	sub bx, ax
+@b:	mov [offset ttt+17+3], cl  ; Set ANSI color of aligned text.
+	sub bx, ax
 	mov [qqq_before], bx
-	mov al, 0B3h  ; '│'  ; The line starts by this
-	int 29h
+	mov ah, 2
+	mov dl, 0B3h  ; '│'  ; The line starts by this
+	int 21h
 	cmp byte [offset ttt], '*'  ; Put out an ANSI EscSeq to set color if needed
 	je @6
 	mov ah, 9
@@ -430,7 +432,6 @@ lld:	; seek(f, qqq_l);
 	cmp al, 0
 	je @6
 	add al, 10
-	mov [offset ttt+17+3], al
 	mov dx, offset ttt+17
 	int 21h
 	mov byte [qqq_ansich], 0h
@@ -439,32 +440,38 @@ lld:	; seek(f, qqq_l);
 	lodsb
 	mov cl, al
 	mov ch, 0
-	mov dx, cx
 	jcxz @1
+	push cx
 	mov cx, [qqq_before]
+	mov ah, 2
 	jcxz @5
-	mov al, ' '
-@2:	int 29h
+	mov dl, ' '
+@2:	int 21h
 	loop @2
-@5:	mov cx, dx
+@5:	pop cx
+	push cx
 	jcxz @8
 @3:	lodsb
-	int 29h
+	mov dl, al
+	int 21h
 	loop @3
-@8:	mov cx, 78
+@8:	pop dx
+	mov cx, 78
 	sub cx, [qqq_before]
 	sub cx, dx
+	mov ah, 2
 	jcxz @1
-	mov al, ' '
-@4:	int 29h
+	mov dl, ' '
+@4:	int 21h
 	loop @4
 @1:	cmp byte [offset ttt], '*'  ; Restore original color via ANSI EscSeq if needed
 	je @7
 	mov ah, 9
 	mov dx, offset ttt+25
 	int 21h
-@7:	mov al, 0B3h  ; '│'  ; The line ends by this, too
-	int 29h
+@7:	mov ah, 2
+	mov dl, 0B3h  ; '│'  ; The line ends by this, too
+	int 21h
 	mov al, 0 ; The return value is FALSE
 	; END OF ALIGN
 
@@ -522,47 +529,53 @@ defarg Header_arg_s, [bp+4]
 	mov dx, offset ttt
 	mov ah, 9
 	int 21h
-@71:	mov al, 0B2h  ; '▓'
+@71:	mov ah, 2
+	mov dl, 0B2h  ; '▓'
 	mov cx, 3
-@72:	int 29h
-	int 29h
-	int 29h
-	int 29h
-	int 29h
-	dec al
+@72:	int 21h
+	int 21h
+	int 21h
+	int 21h
+	int 21h
+	dec dl
 	loop @72
 	mov si, Header_arg_s
 	lodsb
 	mov ah, 0
-	mov dx, ax
+	push ax
 	shr ax, 1
 	mov cx, 25
 	sub cx, ax
 	mov bx, cx
-	mov al, ' '
+	mov ah, 2
+	mov dl, ' '
 	jcxz @74
-@75:	int 29h
+@75:	int 21h
 	loop @75
 @74:	mov cx, [si-1]
 	mov ch, 0h
 @76:	lodsb
-	int 29h
+	mov dl, al
+	int 21h
 	loop @76
 	mov cx, 50
 	sub cx, bx
+	pop dx
 	sub cx, dx
-	mov al, ' '
+	mov ah, 2
+	mov dl, ' '
 	jcxz @78
-@77:	int 29h
+@77:	int 21h
 	loop @77
-@78:	mov al, 0B0h  ; '░'
+@78:	mov ah, 2
+	mov dl, 0B0h  ; '░'
 	mov cx, 3
-@73:	int 29h
-	int 29h
-	int 29h
-	int 29h
-	int 29h
-	inc al
+@73:	int 21h
+	int 21h
+	int 21h
+	int 21h
+	int 21h
+	inc dl
 	loop @73
 	cmp byte [offset ttt], '*'
 	je @79
@@ -578,14 +591,15 @@ defarg PrintLine_arg_wl, byte[bp+4]
 defarg PrintLine_arg_wh, byte[bp+5]
 	push bp
 	mov bp, sp
-	mov al, PrintLine_arg_wl
-	int 29h
+	mov ah, 2
+	mov dl, PrintLine_arg_wl
+	int 21h
 	mov cx, 78
-	mov al, 0C4h  ; '─'
-@70:	int 29h
+	mov dl, 0C4h  ; '─'
+@70:	int 21h
 	loop @70
-	mov al, PrintLine_arg_wh
-	int 29h
+	mov dl, PrintLine_arg_wh
+	int 21h
 	leave
 	ret 2
 
@@ -595,7 +609,10 @@ seg_delta equ (($-_code) SHR 4) + 10h
 
 ; Data with initial value (_data).
 _data:
-ttt_in_data: db 27, '[44;30m$', 27, '[0m', 27, '[K$', 27, '[30;1m$', 27, '[0m$'
+ttt_in_data: db 27, '[44;30m$'
+	db 27, '[0m', 27, '[K$'
+	db 27, '[30;1m$'  ; The number '0' will be modified by code.
+	db 27, '[0m$'
 ttt equ ttt_in_data-_data  ; Because of seg_delta.
 txtfn_in_data: db 'QUOTE.TXT',0
 txtfn equ txtfn_in_data-_data  ; Because of seg_delta.

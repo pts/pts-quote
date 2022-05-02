@@ -18,8 +18,8 @@ serious bugs, see BUG in the source code.
 The QUOTE.IDX index file format is identical in version 2.30 .. 2.5? and
 different from version 2.60.
 
-It uses ANSI.SYS for color output, and it detects the lack of ANSI.SYS (such as
-in DOSBox), and then it prints colorless output.
+It uses ANSI.SYS for color output, and it detects the lack of ANSI.SYS, and
+then it prints colorless output.
 
 Command-line argument (first byte on the command-line):
 
@@ -506,7 +506,7 @@ lld:    { seek(f, qqq.l); }
 	int 21h
 @7:     mov al, 0b3h  { '│' } { The line ends by this, too }
 	int 29h
-	mov al, 0 { The return value is FALSE }
+	mov al, 0  { The return value is FALSE }
 
 { END OF ALIGN }
 
