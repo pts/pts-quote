@@ -76,7 +76,7 @@ File format of the text file quote.txt as of version 2.63:
   LF or CRLF terminator. This is only verified when printing the individual
   quote.
 * To check whether quote.txt contains any errors (except for line-too-long
-  and quote-too-long), i.e. to validate it, run quote63n.com with parameter
+  and quote-too-long), i.e. to validate it, run quote63.com with parameter
   "i" (without the quotes). This will also regenerate the index file
   quote.idx as a side effect. There are errors iff a line starting with E is
   printed.
@@ -140,7 +140,7 @@ About the choice of programming language:
   assembly (see quote3.pas in the pts-quote repository), then it was ported
   to A86 assembly (see quote6.8) to make the executable program size smaller
   by removing the .exe header and the Turbo Pascal 7.0 runtime library.
-* For the 2022 updates, some the A86 source code (.8 files) was ported to
+* For the 2022 updates, some of the A86 source code (.8 files) was ported to
   NASM (.nasm files), because of the simplicity and versatilitiy of the NASM
   assembly languange and the good native availability of free assemblers
   (NASM and Yasm) on modern systems. The source code works with old and new
@@ -150,10 +150,10 @@ About the choice of programming language:
   with NASM it's possible (and easy most of the time) to generate
   byte-by-byte identical executable program output, matching the output of
   A86 and earlier NASM versions. This is great for reproducible builds.
-* Most other assemblers (such as MASM, TASM, LZASM, Wasm, JWasm, GNU AS)
-  except for FASM can't produce a DOS .com executable program directly (but
-  they produce an object file, from which the linker produces an
-  executable). This would introduce complexity and inconvenience to the
-  build and development process.
+* Many other assemblers (such as MASM, TASM, LZASM, Wasm, GNU as) can't
+  produce a DOS .com executable program directly (but they produce an object
+  file, from which the linker produces an executable). This would introduce
+  complexity and inconvenience to the build and development process. NASM,
+  Yasm, FASM and JWasm can produce a DOS .com executable program.
 
 __END__
